@@ -1,0 +1,1024 @@
+<head>
+  <meta charset="UTF-8">
+  <title>WeekWise</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="calendar" id="main">
+    <div class="calendar-header">
+      <h2>Sporthallen Belegungsplan</h2>
+    </div>
+    
+    <!-- Mobile View -->
+    
+    <div class="day-tiles" id="dayTiles">
+        <div class="day-tile">
+          <div class="day-name">Montag</div>
+          <div class="day-bookings">
+              <!-- Bookings will be added dynamically -->
+          </div>
+        </div>
+        <div class="day-tile">
+          <div class="day-name">Dienstag</div>
+          <div class="day-bookings">
+              <!-- Bookings will be added dynamically -->
+          </div>
+        </div>
+        <div class="day-tile">
+          <div class="day-name">Mittwoch</div>
+          <div class="day-bookings">
+              <!-- Bookings will be added dynamically -->
+          </div>
+        </div>
+        <div class="day-tile">
+          <div class="day-name">Donnerstag</div>
+          <div class="day-bookings">
+              <!-- Bookings will be added dynamically -->
+          </div>
+        </div>
+        <div class="day-tile">
+          <div class="day-name">Freitag</div>
+          <div class="day-bookings">
+              <!-- Bookings will be added dynamically -->
+          </div>
+        </div>
+        <div class="day-tile">
+          <div class="day-name">Samstag</div>
+          <div class="day-bookings">
+              <!-- Bookings will be added dynamically -->
+          </div>
+        </div>
+        <div class="day-tile">
+          <div class="day-name">Sonntag</div>
+          <div class="day-bookings">
+              <!-- Bookings will be added dynamically -->
+          </div>
+        </div>
+      <div class="day-tile ablage-tile" id="ablage-tile">
+          <div class="day-name filing-tile">Ablage</div>
+          <div class="day-bookings">
+              <!-- Bookings will be added dynamically -->
+          </div>
+      </div>
+    </div>
+
+
+    <!-- Desktop View -->
+    <div class="weekdays">
+        <div class="weekday">Montag</div>
+        <div class="weekday">Dienstag</div>
+        <div class="weekday">Mittwoch</div>
+        <div class="weekday">Donnerstag</div>
+        <div class="weekday">Freitag</div>
+        <div class="weekday">Samstag</div>
+        <div class="weekday">Sonntag</div>
+    </div>
+    <div class="day-columns" id="dayColumns"></div>
+</div>
+
+<div class="fab" id="newBookingButton" style="display:none">
+    <span class="icon add"></span>
+</div>
+
+<div class="fab" id="editButton">
+    <span class="icon edit"></span>
+</div>
+
+
+<div class="modal" id="loginModal">
+    <div class="modal-content">
+        <h3>Login</h3>
+        <div class="form-group">
+            <input type="password" id="password" placeholder="Passwort">
+        </div>
+        <button onclick="login()">Anmelden</button>
+        <button type="button" class="cancel-button" onclick="closeLoginModal()">Abbrechen</button> 
+    </div>
+</div>
+
+<div class="modal" id="bookingModal">
+    <div class="modal-content">
+        <h3>Termin Details</h3>
+        <form id="bookingForm">
+            <div class="form-group">
+                <label>Tag</label>
+                <select id="bookingDay" required>
+                    <option value="Montag">Montag</option>
+                    <option value="Dienstag">Dienstag</option>
+                    <option value="Mittwoch">Mittwoch</option>
+                    <option value="Donnerstag">Donnerstag</option>
+                    <option value="Freitag">Freitag</option>
+                    <option value="Samstag">Samstag</option>
+                    <option value="Sonntag">Sonntag</option>
+                    <option value="Ablage">Ablage</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Titel</label>
+                <input type="text" id="bookingTitle" required>
+            </div>
+            <div class="form-group">
+                <label>Ort/Treffpunkt</label>
+                <input type="text" id="bookingLocation">
+            </div>
+            <div class="form-group">
+                <label>Zeitraum</label>
+              <div class="form-group" style="float: left; margin-left: 10px;">
+                  <span style="line-height: 30px;"> von </span>
+              </div>
+                <div class="form-group" style="float: left;">
+                  <select id="bookingStart" required></select>
+              </div>
+              <div class="form-group" style="float: left; margin-left: 10px;">
+                  <span style="line-height: 30px;"> bis </span>
+              </div>
+              <div class="form-group" style="float: left;">
+                  <select id="bookingEnd" required></select>
+              </div>
+            </div>
+            <div class="form-group" style="clear: both;">
+                <label>Trainer/Verantwortliche (einer pro Zeile)</label>
+                <textarea id="bookingTrainer" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Kontakt</label>
+                <input type="text" id="bookingContact">
+            </div>
+            <div class="form-group">
+                <label>Link</label>
+                <input type="url" id="bookingLink">
+            </div>
+            <div class="form-group">
+                <label>Beschreibung</label>
+                <textarea id="bookingDescription" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Kategorie</label>
+                <select id="bookingCategory">
+                    <!-- Categories will be added dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
+                <button type="submit" id="editbookingSaveButton">Speichern</button>
+                <button type="button" class="delete-button" id="modalDeleteButton" style="display:none">L&#246;schen</button>
+                <button type="button" class="cancel-button" onclick="closeBookingModal()">Abbrechen</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal" id="optionsModal">
+    <div class="modal-content">
+        <h3>Einstellungen</h3>
+        <div class="form-group">
+            <label>Titel</label>
+            <input type="text" id="calendarTitle" value="Sporthallen Belegungsplan">
+        </div>
+        <div class="form-group">
+            <label>Layout</label>
+            <div class="color-edit header-color-edit">
+                <div class="color-swatch" style="background-color: var(--primary)"></div>
+                <input type="text" value="Kopfbalken" readonly>
+            </div>
+            <div class="color-edit secondary-color-edit">
+                <div class="color-swatch" style="background-color: var(--secondary)"></div>
+                <input type="text" value="Sekund&auml;rfarbe (Standard)" readonly>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Kategorien</label>
+            <div id="bookingColors">
+                <!-- Color options will be inserted here -->
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Zeitbereich</label>
+            <div class="form-group" style="float: left;">
+                <select id="startHour">
+                    <!-- Hours 0-23 will be inserted here -->
+                </select>
+            </div>
+            <div class="form-group" style="float: left; margin-left: 10px;">
+                <span style="line-height: 30px;">bis</span>
+            </div>
+            <div class="form-group" style="float: left; margin-left: 10px;">
+                <select id="endHour">
+                    <!-- Hours 0-23 will be inserted here -->
+                </select>
+            </div>
+        </div>
+        <div class="form-group" style="clear: both;">
+            <label>Export/Import</label>
+            <button onclick="exportBookings()">Termine exportieren</button>
+            <input type="file" id="importFile" style="display:none" accept=".json">
+            <button onclick="document.getElementById('importFile').click()">Termine importieren</button>
+        </div>
+        <div class="form-group" style="clear: both;">
+            <label>Passwort &auml;ndern</label>
+            <input type="password" id="oldpwd" placeholder="Altes Passwort">
+            <input type="password" id="newpwd" placeholder="Neues Passwort">
+        </div>
+        <div class="form-group" style="margin-top: 25px;">
+            <button onclick="saveSettings()">Speichern</button>
+            <button onclick="logout()" class="danger-button">Ausloggen</button>
+            <button style="float:right" type="button" class="cancel-button" onclick="closeOptionsModal()">Abbrechen</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="viewBookingModal">
+    <div class="modal-content">
+        <div class="view-booking-header">
+            <h3 id="viewBookingTitle"></h3>
+            <h4 id="viewBookingLocation"></h4>
+            <div id="viewBookingTrainers" class="trainer-tags"></div>
+        </div>
+        <div id="viewBookingTime"></div>
+        <div id="viewBookingContact" class="contact-info"></div>
+        <div id="viewBookingDescription" class="description-box"></div>
+        <div id="viewBookingLink"></div>
+        <button type="button" class="cancel-button" onclick="closeViewBookingModal()">Schlie&#xdf;en</button>
+    </div>
+</div>
+
+<!-- ### START SIDEBAR ### -->
+<div id="sidebar" class="sidebar-container" >
+  <button class="openbtn" onclick="toggleSidebar()">&#9204; </button>
+  <button class="closebtn" onclick="toggleSidebar()">&#9205;</button>
+
+  <div id="contentSidebar" class="sidebar">
+      <div class="weekday" id="Ablage">Ablage</div>
+      
+        </div>
+      
+  </div>
+</div>
+<!-- ### END SIDEBAR ### -->
+
+</body>
+
+<script>
+
+const mockBookings = [{
+  day: 'Montag',
+  startTime: '08:00',
+  endTime: '10:00',
+  title: 'Demo-Termin',
+  location: 'Halle',
+  trainer: 'Max Mustermann',
+  contact: '0123456789',
+  link: 'https://example.com/schulsport',
+  categoryID: 'moSN9i2ydXalCWhuCxU1',
+  color: 'var(--secondary)',
+  description: 'Beschreibungstext'
+}];
+let isLoggedIn = false;
+let selectedDay = null;
+let selectedColumn = null;
+let showingOptions = false;
+let selectedBookingIndex = null;
+let sidebarOpen = true;
+
+
+function toggleSidebar(vis = false) {
+    if (sidebarOpen == true) {
+        closeNav(vis);
+        sidebarOpen = false;
+    } else {
+        openNav(vis);
+        sidebarOpen = true;
+    }
+}
+
+function openNav(vis) {
+    document.getElementById("contentSidebar").style.width = "20%";
+    document.getElementById("main").style.marginRight = "20%";
+    // den butten zum einblenden des sidebar ausblenden
+    document.querySelector(".openbtn").style.display = "none";
+    // den butten zum ausblenden des sidebar einblenden
+    document.querySelector(".closebtn").style.display = "block";
+    // Blendet die Sidebar (und die Ablage in der mobilen Ansicht) ein wenn vis = true ist
+    if (vis == true) {
+        document.getElementById("sidebar").style.display = "block";
+        document.getElementById("ablage-tile").style.display = "block";
+    }
+}
+
+function closeNav(vis) {
+    document.getElementById("contentSidebar").style.width = "0";
+    document.getElementById("main").style.marginRight= "0";
+    // den butten zum einblenden des sidebar einblenden
+    document.querySelector(".openbtn").style.display = "block";
+    // den butten zum ausblenden des sidebar ausblenden
+    document.querySelector(".closebtn").style.display = "none";
+    // Blendet die Sidebar (und die Ablage in der mobilen Ansicht) aus wenn vis = true ist
+    if (vis == true) {
+        document.getElementById("sidebar").style.display = "none";
+        document.getElementById("ablage-tile").style.display = "none";
+    }
+}
+
+function createTimeOptions() {
+  const startHour = parseInt(localStorage.getItem('startHour') || '8');
+  const endHour = parseInt(localStorage.getItem('endHour') || '22');
+  const startSelect = document.getElementById('bookingStart');
+  const endSelect = document.getElementById('bookingEnd');
+  startSelect.innerHTML = '';
+  endSelect.innerHTML = '';
+  for (let hour = startHour; hour <= endHour; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      const startOption = new Option(timeStr, timeStr);
+      const endOption = new Option(timeStr, timeStr);
+      startSelect.add(startOption);
+      endSelect.add(endOption);
+    }
+  }
+}
+  
+function createDayColumns() {
+  const container = document.getElementById('dayColumns');
+  container.innerHTML = '';
+  const startHour = parseInt(localStorage.getItem('startHour') || '8');
+  const endHour = parseInt(localStorage.getItem('endHour') || '22');
+  const totalHeight = (endHour - startHour) * 60;
+  ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'].forEach(day => {
+    const column = document.createElement('div');
+    column.className = 'day-column';
+    column.style.height = `${totalHeight}px`;
+    const timeMarkers = document.createElement('div');
+    timeMarkers.className = 'time-markers';
+    for (let hour = startHour; hour <= endHour; hour++) {
+      const marker = document.createElement('div');
+      marker.className = 'time-marker';
+      marker.style.top = `${(hour - startHour) * 60}px`;
+      marker.textContent = `${hour}:00`;
+      timeMarkers.appendChild(marker);
+    }
+    column.appendChild(timeMarkers);
+    column.addEventListener('click', e => {
+      if (isLoggedIn && e.target.className === 'day-column') {
+        selectedDay = day;
+        selectedColumn = column;
+        const rect = column.getBoundingClientRect();
+        const clickY = e.clientY - rect.top;
+        const hour = Math.floor(clickY / 60) + startHour;
+        const minute = Math.round(clickY % 60 / 15) * 15;
+        document.getElementById('bookingDay').value = day;
+        document.getElementById('bookingStart').value = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const endHour = hour + 1;
+        if (endHour <= parseInt(localStorage.getItem('endHour') || '22')) {
+          document.getElementById('bookingEnd').value = `${endHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        }
+        document.getElementById('bookingModal').style.display = 'flex';
+      }
+    });
+    container.appendChild(column);
+  });
+
+  //create the mobile view
+
+  renderBookings();
+}
+
+function createBookingElement(booking, index, isMobile) {
+  const bookingEl = document.createElement('div');
+  bookingEl.className = isMobile ? 'mobile-booking' : 'booking';
+  bookingEl.dataset.index = index;
+  bookingEl.style.backgroundColor = rgbToHex(booking.color) || booking.color || 'var(--secondary)';
+  
+  const content = `
+    <div class="${isMobile ? 'mobile-booking-title' : 'booking-title'}">${booking.title}</div>
+    <div class="${isMobile ? 'mobile-booking-time' : 'booking-time'}">${booking.startTime} - ${booking.endTime}</div>
+    ${isLoggedIn ? `
+      <div class="${isMobile ? 'mobilebooking-actions' : 'booking-actions'}">
+        <button class="action-button edit-button" onclick="editBooking(${index})">Bearbeiten</button>
+        <button class="action-button delete-button" onclick="deleteBooking(${index})">Löschen</button>
+      </div>
+    ` : ''}
+  `;
+  
+  bookingEl.innerHTML = content;
+  bookingEl.addEventListener('click', e => {
+    if (e.target.tagName !== 'BUTTON' && !isLoggedIn) {
+      showBookingDetails(booking);
+    } else if (e.target.tagName !== 'BUTTON') {
+      const allBookings = document.querySelectorAll(isMobile ? '.mobile-booking' : '.booking');
+      allBookings.forEach(b => b.classList.remove('expanded'));
+      bookingEl.classList.add('expanded');
+    }
+  });
+  
+  return bookingEl;
+}
+
+function renderBookings() {
+  const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+  // sort mockBookings by startTime
+  mockBookings.sort((a, b) => {
+    const aStartTime = a.startTime.split(':');
+    const bStartTime = b.startTime.split(':');
+    return aStartTime[0] - bStartTime[0] || aStartTime[1] - bStartTime[1];    
+  })
+  mockBookings.forEach(booking => {
+    if (!booking.categoryID) {
+      booking.categoryID = 'moSN9i2ydXalCWhuCxU1';  
+    }
+    if (booking.categoryID) {
+      const color = bookingColors.find(color => color.id === booking.categoryID);
+      if (color) {
+        booking.color = color.color;
+      }
+    } else {
+      booking.color = 'var(--secondary)';
+    }
+  });
+
+  // Render mobile view
+  const mobileColumns = document.querySelectorAll('.day-tile');
+  mobileColumns.forEach(mobileColumn => {
+    const existingMobileBookings = mobileColumn.querySelectorAll('.mobile-booking');
+    existingMobileBookings.forEach(mobileBooking => mobileBooking.remove());
+  });
+  mockBookings.forEach((booking, index) => {
+    const mobileDayIndex = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag','Ablage'].indexOf(booking.day);
+    const mobileColumn = mobileColumns[mobileDayIndex];
+    const mobileBookingEl = createBookingElement(booking, index, true);
+    mobileColumn.appendChild(mobileBookingEl);
+  });
+
+  // Render desktop view
+  const columns = document.querySelectorAll('.day-column');
+  columns.forEach(column => {
+    const existingBookings = column.querySelectorAll('.booking');
+    existingBookings.forEach(booking => booking.remove());
+  });
+  
+  const sidebar = document.getElementById('Ablage');
+  const existingBookings = sidebar.querySelectorAll('.mobile-booking');
+  existingBookings.forEach(booking => booking.remove());
+
+  const configuredStartHour = parseInt(localStorage.getItem('startHour') || '8');
+  mockBookings.forEach((booking, index) => {
+    const dayIndex = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag','Ablage'].indexOf(booking.day);
+    if (dayIndex !== 7) {
+        const column = columns[dayIndex];
+        const bookingEl = createBookingElement(booking, index, false);
+        const startHour = parseInt(booking.startTime.split(':')[0]);
+        const startMinute = parseInt(booking.startTime.split(':')[1]);
+        const endHour = parseInt(booking.endTime.split(':')[0]);
+        const endMinute = parseInt(booking.endTime.split(':')[1]);
+        const top = (startHour - configuredStartHour) * 60 + startMinute;
+        const height = (endHour - startHour) * 60 + (endMinute - startMinute);
+        bookingEl.style.top = `${top}px`;
+        bookingEl.style.height = `${height}px`;
+        column.appendChild(bookingEl);
+    } else {
+      const sidebar = document.getElementById('Ablage');
+      const sidebarBookingEl = createBookingElement(booking, index, true);
+      sidebar.appendChild(sidebarBookingEl);
+    }
+  });
+}
+
+function showBookingDetails(booking) {
+  const modal = document.getElementById('viewBookingModal');
+  document.getElementById('viewBookingTitle').textContent = booking.title;
+  document.getElementById('viewBookingTime').textContent = `${booking.startTime} - ${booking.endTime}`;
+  document.getElementById('viewBookingLocation').textContent = booking.location;
+  if (booking.trainer !== '') {
+  const trainersDiv = document.getElementById('viewBookingTrainers');
+  trainersDiv.innerHTML = booking.trainer.split('\n').map(t => `<span class="trainer-tag">${t}</span>`).join('');
+  }
+  const contactDiv = document.getElementById('viewBookingContact');
+  contactDiv.innerHTML = booking.contact ? `Kontakt: ${booking.contact}` : '';
+  const descriptionDiv = document.getElementById('viewBookingDescription');
+  descriptionDiv.innerHTML = booking.description ? booking.description.replace(/\n/g, '<br>') : '';
+  descriptionDiv.style.display = booking.description ? 'block' : 'none';
+  document.querySelector('.view-booking-header').style.backgroundColor = booking.color;
+  const linkDiv = document.getElementById('viewBookingLink');
+  linkDiv.innerHTML = booking.link ? `<a href="${booking.link}" target="_blank" class="link-button"><span class="icon link"></span></a>` : '';
+  linkDiv.style.display = booking.link ? 'block' : 'none';
+  modal.style.display = 'flex';
+}
+
+async function deleteBooking(index) {
+  if (confirm('Möchten Sie diesen Termin wirklich löschen?')) {
+    mockBookings.splice(index, 1);
+    await saveToServer('bookings.json', mockBookings);
+    renderBookings();
+  }
+}
+
+function editBooking(index) {
+  const booking = mockBookings[index];
+
+  //set default category if no category is set
+  if (!booking.categoryID) {
+    booking.category = 'moSN9i2ydXalCWhuCxU1';
+  }
+  //get all booking colors
+  const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+  //create select options for category
+  const categorySelect = document.getElementById('bookingCategory');
+  categorySelect.innerHTML = '<option value="moSN9i2ydXalCWhuCxU1" style="color: var(--secondary)">Standard</option>';
+  bookingColors.forEach((color) => {
+    const option = document.createElement('option');
+    option.textContent = color.name;
+    option.style.color = rgbToHex(color.color);
+    option.value = color.id;
+    categorySelect.appendChild(option);
+  });
+  //set values in modal
+  document.getElementById('bookingTitle').value = booking.title;
+  document.getElementById('bookingDay').value = booking.day;
+  document.getElementById('bookingStart').value = booking.startTime;
+  document.getElementById('bookingEnd').value = booking.endTime;
+  document.getElementById('bookingLocation').value = booking.location || '';
+  document.getElementById('bookingTrainer').value = booking.trainer || '';
+  document.getElementById('bookingContact').value = booking.contact || '';
+  document.getElementById('bookingLink').value = booking.link || '';
+  document.getElementById('bookingDescription').innerHTML = booking.description || '';
+  document.getElementById('bookingCategory').value = booking.categoryID || 'moSN9i2ydXalCWhuCxU1';
+  document.getElementById('modalDeleteButton').style.display = 'inline';
+  document.getElementById('modalDeleteButton').onclick = () => deleteBooking(index);
+  document.getElementById('editbookingSaveButton').onclick = () => {updateCategorySelect(); renderBookings();}
+  selectedBookingIndex = index;
+
+  document.getElementById('bookingModal').style.display = 'flex';
+
+}
+
+function login() {
+  const password = stringToHash(document.getElementById('password').value);
+  const storedHash = parseInt(localStorage.getItem('loginhash'), 10);
+  if (password === storedHash) {
+    isLoggedIn = true;
+    const editButton = document.getElementById('editButton');
+    editButton.innerHTML = '<span class="icon settings"></span>';
+    newBookingButton.style.display = 'flex';
+    closeLoginModal();
+    renderBookings();
+    toggleSidebar(true);
+  } else {
+    alert('Falsches Passwort!');
+  }
+}
+
+function logout() {
+  if (confirm('Möchten Sie sich wirklich abmelden? Nicht gespeicherte Änderungen gehen verloren.')) {
+    isLoggedIn = false;
+    document.getElementById('editButton').innerHTML = '<span class="icon edit"></span>';
+    document.getElementById('newBookingButton').style.display = 'none';
+    closeOptionsModal();
+    if (sidebarOpen) {
+      toggleSidebar(true);
+    }
+  }
+}
+
+function stringToHash(string) {
+
+  let hash = 0;
+  if (string.length == 0) return hash;
+  for (i = 0; i < string.length; i++) {
+      char = string.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+  }
+  return hash;
+  }
+
+function closeBookingModal() {
+  document.getElementById('bookingModal').style.display = 'none';
+  document.getElementById('bookingForm').reset();
+  document.getElementById('modalDeleteButton').style.display = 'none';
+  document.querySelectorAll('.color-option').forEach(option => option.classList.remove('selected'));
+  selectedBookingIndex = null;
+}
+
+function closeLoginModal() {
+  document.getElementById('loginModal').style.display = 'none';
+  document.getElementById('password').value = '';
+}
+
+function closeViewBookingModal() {
+  document.getElementById('viewBookingModal').style.display = 'none';
+}
+
+document.getElementById('editButton').addEventListener('click', () => {
+  if (!isLoggedIn) {
+    document.getElementById('loginModal').style.display = 'flex';
+  } else {
+    showOptionsModal();
+  }
+});
+
+document.getElementById('newBookingButton').addEventListener('click', () => {
+  if (isLoggedIn) {
+    //set default booking data
+    document.getElementById('bookingTitle').value = '';
+    document.getElementById('bookingDay').value = 'Montag';
+    document.getElementById('bookingStart').value = '08:00';
+    document.getElementById('bookingEnd').value = '09:00';
+    document.getElementById('bookingLocation').value = '';
+    document.getElementById('bookingTrainer').value = '';
+    document.getElementById('bookingContact').value = '';
+    document.getElementById('bookingLink').value = '';
+    document.getElementById('bookingDescription').innerHTML = '';
+    document.getElementById('bookingCategory').value = 'moSN9i2ydXalCWhuCxU1';
+    //open edit dialog
+    document.getElementById('bookingModal').style.display = 'flex';
+  } else {
+    document.getElementById('loginModal').style.display = 'flex';
+  }
+});
+    
+function importBookings() {
+  const file = document.getElementById('importFile').files[0];
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const newBookings = JSON.parse(e.target.result);
+      const validBookings = newBookings.filter(booking => validateBooking(booking));
+      if (validBookings.length !== newBookings.length) {
+        alert('Warning: Some imported bookings were invalid and were skipped');
+      }
+      if (validBookings.length === 0) {
+        alert('Error: No valid bookings found in import file');
+        return;
+      }
+      if (confirm('Möchten Sie die bestehenden Termine überschreiben oder ergänzen?\nOK = Überschreiben, Abbrechen = Ergänzen')) {
+        mockBookings.length = 0;
+        mockBookings.push(...validBookings);
+      } else {
+        mockBookings.push(...validBookings);
+      }
+      renderBookings();
+    } catch (error) {
+      alert('Error: Invalid file format. Please provide a valid JSON file.');
+      console.error('Import error:', error);
+    }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('importFile').addEventListener('change', importBookings);
+
+async function showOptionsModal() {
+  document.getElementById('optionsModal').style.display = 'flex';
+  document.getElementById('calendarTitle').value = document.querySelector('.calendar-header h2').textContent;
+  
+  //enables the user to choose the color of the header
+  const headerColorEdit = document.querySelector('.header-color-edit');
+  const headerSwatch = headerColorEdit.querySelector('.color-swatch');
+  headerSwatch.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--header-color').trim();
+  headerSwatch.addEventListener('click', e => {
+    const colorPicker = document.createElement('input');
+    colorPicker.type = 'color';
+    colorPicker.value = rgbToHex(e.target.style.backgroundColor);
+    colorPicker.click();
+    colorPicker.addEventListener('change', () => {
+      e.target.style.backgroundColor = colorPicker.value;
+    });
+  });
+  //enables the user to choose the color of the secondary
+  const secondaryColorEdit = document.querySelector('.secondary-color-edit');
+  const secondarySwatch = secondaryColorEdit.querySelector('.color-swatch');
+  secondarySwatch.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--secondary').trim();
+  secondarySwatch.addEventListener('click', e => {
+    const colorPicker = document.createElement('input');
+    colorPicker.type = 'color';
+    colorPicker.value = rgbToHex(e.target.style.backgroundColor);
+    colorPicker.click();
+    colorPicker.addEventListener('change', () => {
+      e.target.style.backgroundColor = colorPicker.value;
+    });
+  });
+
+  populateTimeOptions();
+  const bookingColorsDiv = document.getElementById('bookingColors');
+  bookingColorsDiv.innerHTML = '';
+  await updateCategorySelect();
+
+  const savedColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+  savedColors.forEach(({
+    name,
+    color,
+    id
+  }) => {
+    const colorEdit = document.createElement('div');
+    colorEdit.className = 'color-edit';
+    colorEdit.id = id;
+    colorEdit.innerHTML = `
+          <div class="color-swatch" style="background-color: ${color}"></div>
+          <input type="text" value="${name}" placeholder="Category name">
+          <span class="icon del color-delete"></span>
+        `;
+    bookingColorsDiv.appendChild(colorEdit);
+  });
+  const addColorBtn = document.createElement('button');
+  addColorBtn.textContent = 'Neue Kategorie';
+  addColorBtn.onclick = () => {
+    const colorEdit = document.createElement('div');
+    const createID = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    colorEdit.className = 'color-edit';
+    colorEdit.id = createID;
+    colorEdit.innerHTML = `
+          <div class="color-swatch" style="background-color: #2196F3"></div>
+          <input type="text" placeholder="Name">
+          <span class="icon del color-delete"></span>
+        `;
+    bookingColorsDiv.insertBefore(colorEdit, addColorBtn);
+  };
+  bookingColorsDiv.appendChild(addColorBtn);
+  bookingColorsDiv.addEventListener('click', e => {
+    if (e.target.classList.contains('color-swatch')) {
+      const colorPicker = document.createElement('input');
+      colorPicker.type = 'color';
+      colorPicker.value = rgbToHex(e.target.style.backgroundColor);
+      colorPicker.click();
+      colorPicker.addEventListener('change', () => {
+        e.target.style.backgroundColor = colorPicker.value;
+      });
+    } else if (e.target.classList.contains('color-delete')) {
+      e.target.closest('.color-edit').remove();
+    }
+  });
+  const startHour = localStorage.getItem('startHour') || '8';
+  const endHour = localStorage.getItem('endHour') || '22';
+  document.getElementById('startHour').value = startHour;
+  document.getElementById('endHour').value = endHour;
+}
+
+function rgbToHex(rgb) {
+  if (!rgb) return '#000000';
+  rgb = rgb.replace('rgb(', '').replace(')', '').split(',');
+  let r = parseInt(rgb[0]).toString(16);
+  let g = parseInt(rgb[1]).toString(16);
+  let b = parseInt(rgb[2]).toString(16);
+  if (r.length === 1) r = '0' + r;
+  if (g.length === 1) g = '0' + g;
+  if (b.length === 1) b = '0' + b;
+  return '#' + r + g + b;
+}
+
+function closeOptionsModal() {
+  document.getElementById('optionsModal').style.display = 'none';
+}
+
+async function saveSettings() {
+  document.querySelector('.calendar-header h2').textContent = document.getElementById('calendarTitle').value;
+  document.documentElement.style.setProperty('--header-color', rgbToHex(document.querySelector('.header-color-edit .color-swatch').style.backgroundColor));
+  document.documentElement.style.setProperty('--secondary', rgbToHex(document.querySelector('.secondary-color-edit .color-swatch').style.backgroundColor));
+  const startHour = document.getElementById('startHour').value;
+  const endHour = document.getElementById('endHour').value;
+  localStorage.setItem('startHour', startHour);
+  localStorage.setItem('endHour', endHour);
+  
+  const oldpwd = localStorage.getItem('loginhash');
+  const oldpwdEntered = document.getElementById('oldpwd').value;
+  const newpwdEntered = document.getElementById('newpwd').value;
+  // check if input textbox for old password is not empty
+  if ( oldpwdEntered != '') {
+  // chek if old password is correct
+  if (oldpwd != stringToHash(oldpwdEntered)) {
+    alert('Das alte Passwort ist falsch');
+    return;
+  } else 
+  // check if new password is not empty
+  if (newpwdEntered == '') {
+    alert('Das neue Passwort darf nicht leer sein');
+    return;
+  } else 
+  // check if new password is secure enough (contains at least 8 characters, 
+  // 1 uppercase letter, 1 lowercase letter, 1 number)
+  if (newpwdEntered .length < 8 || !document.getElementById('newpwd').value.match(/[A-Z]/) || !document.getElementById('newpwd').value.match(/[a-z]/) || !document.getElementById('newpwd').value.match(/[0-9]/)) {
+    alert('Das neue Passwort ist nicht sicher genug, es muss mindestens 8 Zeichen lang sein und mindestens einen Großbuchstaben, einen Kleinbuchstaben und eine Zahl enthalten');
+    return;
+  } else
+  // remind user that they are about to update the password and that it cannot be restored. 
+  // new password schould be stored securely e.g. in a password manager
+  if (confirm('Möchten Sie das Passwort wirklich aktualisieren? Das Zugangspasswort kann nicht wiederhergestellt werden. Stelle sicher, dasss das neue Passwort sicher notiert ist.')) {
+    const newpwd = stringToHash(newpwdEntered);
+    localStorage.setItem('loginhash', newpwd);
+    } else {
+      // throw error. password not updated
+      alert('Das Passwort wurde nicht aktualisiert');
+      return;
+    }
+  }
+
+  // get all booking colors from HTML
+  const bookingColors = Array.from(document.querySelectorAll('#bookingColors .color-edit')).map(colorEdit => {
+    const name = colorEdit.querySelector('input').value;
+    const color = colorEdit.querySelector('.color-swatch').style.backgroundColor;
+    const id = colorEdit.id;
+    return { "name": name, "color": color, "id": id };
+  });
+
+  // create a new object with the settings to be saved
+  const configData = {
+    title: document.querySelector('.calendar-header h2').textContent,
+    headerColor: getComputedStyle(document.documentElement).getPropertyValue('--header-color'),
+    secondaryColor: getComputedStyle(document.documentElement).getPropertyValue('--secondary'),
+    startHour,
+    endHour,
+    bookingColors,
+    loginhash: localStorage.getItem('loginhash')  
+  };
+
+  await saveToServer('settings.json', configData);
+  await saveToServer('bookings.json', mockBookings);
+  await updateCategorySelect();
+  createTimeOptions();
+  createDayColumns();
+  closeOptionsModal();
+}
+
+async function exportBookings() {
+  const cleanBookings = mockBookings.map(booking => {
+    const clean = {};
+    for (const [key, value] of Object.entries(booking)) {
+      if (value !== undefined && value !== '') {
+        clean[key] = value;
+      }
+    }
+    return clean;
+  });
+  await saveToServer('bookings.json', cleanBookings);
+  // Hier können Sie sicher sein, dass die Daten erfolgreich gespeichert wurden
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cleanBookings, null, 2));
+  const downloadAnchorNode = document.createElement('a');
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", "bookings.json");
+  document.body.appendChild(downloadAnchorNode);
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
+}
+
+function populateTimeOptions() {
+  const startSelect = document.getElementById('startHour');
+  const endSelect = document.getElementById('endHour');
+  startSelect.innerHTML = '';
+  endSelect.innerHTML = '';
+  for (let i = 0; i < 24; i++) {
+    const hour = i.toString().padStart(2, '0') + ':00';
+    startSelect.add(new Option(hour, i));
+    endSelect.add(new Option(hour, i));
+  }
+}
+
+document.getElementById('bookingForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const categoryID = document.getElementById('bookingCategory').value;
+  const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+  const selectedColor = bookingColors.find(color => color.id === categoryID)?.color || 'var(--secondary)';
+
+  const newBooking = {
+    day: document.getElementById('bookingDay').value,
+    startTime: document.getElementById('bookingStart').value,
+    endTime: document.getElementById('bookingEnd').value,
+    location: document.getElementById('bookingLocation').value.trim(),
+    title: document.getElementById('bookingTitle').value,
+    trainer: document.getElementById('bookingTrainer').value.trim(),
+    contact: document.getElementById('bookingContact').value.trim(),
+    link: document.getElementById('bookingLink').value.trim(),
+    categoryID: categoryID,
+    description: document.getElementById('bookingDescription').value.trim(),
+    color: selectedColor
+  };
+
+  if (selectedBookingIndex !== null) {
+    mockBookings[selectedBookingIndex] = newBooking;
+    selectedBookingIndex = null;
+  } else {
+    mockBookings.push(newBooking);
+  }
+  await saveToServer('bookings.json', mockBookings);
+  renderBookings();
+  closeBookingModal();
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.booking')) {
+    const allBookings = document.querySelectorAll('.booking');
+    allBookings.forEach(b => b.classList.remove('expanded'));
+  }
+});
+
+async function updateCategorySelect() { 
+  // loads bookingColors and categorys from server and saves them to local storage
+  try {
+    const config = await loadFromServer('settings.json');
+    if (config && config.bookingColors) {
+      localStorage.setItem('bookingColors', JSON.stringify(config.bookingColors));
+    } else {
+      console.warn('Config or bookingColors not found');
+    }
+  } catch (err) {
+    console.error('Error loading config:', err);
+  }
+}
+
+function initializeColors() {
+  const savedHeaderColor = localStorage.getItem('headerColor');
+  if (savedHeaderColor) {
+    document.documentElement.style.setProperty('--header-color', savedHeaderColor);
+  }
+}
+
+function validateBooking(booking) {
+  const requiredFields = ['day', 'startTime', 'endTime', 'title'];
+  return requiredFields.every(field => booking[field] && booking[field].trim() !== '');
+}
+
+function initializeDefaults() {
+  localStorage.setItem('startHour', '8');
+  localStorage.setItem('endHour', '22');
+  localStorage.setItem('bookingColors', '[]');
+  localStorage.setItem('loginhash', -1352366804);
+  document.documentElement.style.setProperty('--header-color', '#2196F3');
+  mockBookings.length = 0;
+  createTimeOptions();
+  createDayColumns();
+  updateCategorySelect();
+}
+
+window.addEventListener('load', async () => {
+  try {
+    const config = await loadFromServer('settings.json');
+    const bookings = await loadFromServer('bookings.json');
+    if (config) {
+      document.querySelector('.calendar-header h2').textContent = config.title;
+      document.documentElement.style.setProperty('--header-color', config.headerColor);
+      document.documentElement.style.setProperty('--secondary', config.secondaryColor);
+      localStorage.setItem('startHour', config.startHour);
+      localStorage.setItem('endHour', config.endHour);
+      localStorage.setItem('bookingColors', JSON.stringify(config.bookingColors));
+      localStorage.setItem('loginhash', config.loginhash);
+    }
+    if (bookings) {
+      mockBookings.length = 0;
+      mockBookings.push(...bookings);
+    }
+  } catch (err) {
+    console.error('Error loading data:', err);
+    initializeDefaults();
+  }
+  createTimeOptions();
+  createDayColumns();
+  document.getElementById('editButton').style.display = 'flex';
+  initializeColors();
+  if (sidebarOpen) {
+    toggleSidebar();
+  }
+});
+
+async function saveToServer(filename, data) {
+  try {
+   const response = await fetch(`save_json.php?filename=${filename}&action=save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.text();
+    if (result !== 'OK') {
+      throw new Error(`Fehler beim Speichern der Datei: ${result}`);
+    }
+    return Promise.resolve();
+  } catch (err) {
+    console.error(`Error saving ${filename}:`, err);
+    alert(`Fehler beim Speichern von ${filename}`);
+    return Promise.reject(err);
+  }
+}
+
+async function loadFromServer(filename) {
+  try {
+    const response = await fetch(`save_json.php?filename=${filename}&action=load`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return  result;
+  } catch (err) {
+    console.error(`Error loading ${filename}:`, err);
+    return null;
+  }
+}
+
+window.addEventListener('resize', function() {
+  if (window.innerWidth < 826 && sidebarOpen) {
+    toggleSidebar();
+  }
+});
+</script>
+</html>

@@ -1,0 +1,604 @@
+:root {
+    --header-color: #2195f300;
+    --contrast: rgb(255, 255, 255); /* Default value, adjust as needed */
+    --primary: #2196F3;
+    --secondary: #FFC107;
+    --danger: #f44336;
+}
+
+/* Icons */
+
+.icon {
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-position: center;
+    mask-position: center;
+    display: block;
+    width: 24px;
+    height: 24px;
+    background-image: none;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-color: var(--contrast);
+}
+
+
+.icon.add {
+    -webkit-mask-image: url('/ico/add.svg');
+    mask-image: url('/ico/add.svg');
+}
+
+.icon.edit {
+    -webkit-mask-image: url('/ico/edit.svg');
+    mask-image: url('/ico/edit.svg');
+}
+
+.icon.del {
+    -webkit-mask-image: url('/ico/del.svg');
+    mask-image: url('/ico/del.svg');
+}
+
+.icon.settings {
+    -webkit-mask-image: url('/ico/settings.svg');
+    mask-image: url('/ico/settings.svg');
+}
+
+.icon.link {
+    -webkit-mask-image: url('/ico/link.svg');
+    mask-image: url('/ico/link.svg');
+}
+
+
+/* Sidebar Styles */
+
+.sidebar {
+    width: 20%;
+    position: fixed;
+    top: 0;
+    right: 0;
+    border: 1px solid #333;
+    background-color: #fff;
+    box-shadow: -5px 0 5px #33333363;
+    overflow-x: hidden;
+    transition: 0.1s;
+    padding-top: 76px;
+    height: 100%;
+    z-index: 50; /* Stelle sicher, dass die Sidebar über dem Hauptinhalt unter dem Header liegt */
+}
+
+.sidebar-container {
+    display: none;
+}
+
+.closebtn {
+    font-size: 20px;
+    cursor: pointer;
+    background-color: var(--header-color);
+    color: var(--contrast);
+    padding: 10px 5px;
+    border: 1px solid #333;
+    border-radius: 5px 0 0 5px;
+    position: absolute;
+    right: 20%;
+    top: 25%;
+    z-index: 997;
+}
+
+.openbtn {
+    font-size: 20px;
+    cursor: pointer;
+    background-color: var(--header-color);
+    color: var(--contrast);
+    padding: 10px 5px;
+    border: 1px solid #333;
+    border-radius: 5px 0 0 5px;
+    position: absolute;
+    top: 25%;
+    right: 0px;
+    z-index: 1001;
+    display: none;
+}
+
+#main {
+    transition: margin-right .5s;
+}
+
+
+/* document */
+
+h1 {
+    font-size: 2em;
+    margin: 10px;
+}
+
+h2 {
+    font-size: 1.7em;
+    margin: 10px;
+}
+
+h3 {
+    font-size: 1.5em;
+    margin: 5px;
+    ;
+}
+
+h4 {
+    font-size: 1.1em;
+    margin: 5px;
+    font-style: italic;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 25px;
+    background: #ffffff00;
+}
+
+.calendar {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.calendar-header {
+    background: var(--header-color);
+    color: white;
+    padding: 15px;
+    text-align: center;
+}
+
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: #f0f0f0;
+    border-bottom: 1px solid #ddd;
+}
+
+.weekday {
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.day-columns {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.day-column {
+    border: 1px solid #ddd;
+    position: relative;
+    overflow: hidden;
+    min-height: 400px;
+    height: auto;
+}
+
+.booking {
+    background: var(--secondary);
+    border-radius: 4px;
+    padding: 10px;
+    margin: 5px;
+    font-size: 0.9em;
+    position: absolute;
+    width: calc(100% - 20px);
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.booking.expanded {
+    z-index: 2;
+    transform: scale(1.05);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+.booking-title {
+    font-weight: bold;
+    margin: 0;
+}
+
+.booking-time {
+    font-size: 0.8em;
+    color: #666;
+}
+
+.booking-details {
+    font-size: 0.8em;
+    color: #666;
+    display: none;
+}
+
+.booking.expanded .booking-details {
+    display: block;
+}
+
+.booking-actions {
+    display: flex;
+    margin-top: 10px;
+    gap: 5px;
+}
+
+.booking.expanded .booking-actions {
+    display: flex;
+}
+
+#bookingDescription {
+    width: 100%;
+}
+
+.action-button {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.8em;
+    color: rgb(255, 255, 255);
+}
+
+.edit-button {
+    background: var(--header-color);
+}
+
+.delete-button {
+    background: var(--danger);
+    background-color: var(--danger);
+}
+
+.fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--header-color);
+    color: rgb(255, 255, 255);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 100;
+}
+
+
+.fab:hover {
+    transform: scale(1.1);
+}
+
+.fab .material-icons {
+    font-size: 24px;
+}
+
+.options-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--header-color);
+    color: white;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.options-button:hover {
+    transform: scale(1.1);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.modal-content {
+    position: relative;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.time-markers {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.time-marker {
+    position: absolute;
+    width: 100%;
+    border-top: 1px dashed #ddd;
+    font-size: 0.7em;
+    color: #999;
+    padding-left: 5px;
+}
+
+.cancel-button {
+    background: #999;
+    margin-left: 10px;
+}
+
+.color-picker {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.color-option {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.color-option.selected {
+    border-color: #333;
+}
+
+.danger-button {
+    background: var(--danger);
+}
+
+.color-edit {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.color-swatch {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.color-delete {
+    background-color: var(--danger);
+    cursor: pointer;
+}
+
+.header-color-edit input {
+    background: #f0f0f0;
+    cursor: not-allowed;
+}
+
+.secondary-color-edit input {
+    background: #f0f0f0;
+    cursor: not-allowed;
+}
+
+.view-booking-header {
+    background: var(--secondary);
+    color: white;
+    padding: 15px;
+    margin: -20px -20px 20px -20px;
+    border-radius: 8px 8px 0 0;
+    position: relative;
+    padding-bottom: 40px;
+    text-align: center;  
+}
+
+.trainer-tags {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    margin: 0;
+    text-align: right;
+}
+
+.trainer-tag {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 15px;
+    margin: 2px;
+    font-size: 0.9em;
+}
+
+.description-box {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+.contact-info {
+    margin: 15px 0;
+}
+
+.link-button {
+    background: var(--primary);
+    color: white;
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: transform 0.2s;
+    margin-top: 0;
+}
+
+.link-button:hover {
+    transform: scale(1.1);
+}
+
+.link-button .material-icons {
+    font-size: 20px;
+}
+
+#viewBookingLink {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+}
+
+/* Mobile View */
+
+.day-tiles {
+    margin: 10px;
+    flex-direction: column;
+}
+
+
+.day-name {
+    background: #f5f5f5;
+    color: #333;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    margin: 5px;
+    vertical-align: middle;
+}
+
+.filing-tile {
+    background-color: var(--danger);
+}
+
+.ablage-tile {
+    display: none;
+}
+
+
+.day-bookings {
+    margin-top: 10px;
+}
+
+.mobile-booking {
+    background: var(--secondary);
+    padding: 10px;
+    border-radius: 8px;
+    margin: 5px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.mobile-booking-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.mobile-booking-time {
+    font-size: 0.8em;
+    color: #666;
+}
+
+/* diverse responsive funktionen */
+
+@media (min-width: 826px) {
+  .day-tiles {
+    display: none;
+  }
+}
+
+
+@media (max-width: 1200px) {
+  .delete-button {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .booking-time {
+    display: none;
+  }
+}
+
+@media (max-width: 825px) {
+  .delete-button {
+    display: inline-block;
+  }
+}
+
+@media (max-width: 825px) {
+  .weekdays, .day-columns {
+    display: none;
+  }
+  .sidebar-wrapper {
+    display: none;
+  }
+  .calendar {
+    margin-right: 0%;
+  }
+
+  .fab {
+    display: flex;
+  }
+
+  #editButton {
+    right: 30px;
+  }
+
+  #newBookingButton {
+    right: 90px;
+  }
+}
+
