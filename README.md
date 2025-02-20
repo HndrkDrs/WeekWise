@@ -1,7 +1,8 @@
 # WeekWise
 
-WeekWise ist ein einfaches Tool um einen Wochenplan zu pflegen. 
+WeekWise ist ein einfaches Tool um einen Wochenplan zu pflegen. Farben und Kategorien können nach belieben im UI angepasst werden.
 Entwickelt wurde es in erster Linie für die wöchentlichen Angebote eines Sportvereins.
+(dahin führt auch der Link - ihr seht das Tool dort demnächst im produktiv-Einsatz)
 
 ## Installation
 
