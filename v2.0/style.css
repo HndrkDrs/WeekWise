@@ -261,19 +261,7 @@ body.readonly .mobile-booking {
     width: calc(25% - 3px);
 }
 
-.booking[data-overlap-index="1"] {
-    left: calc(50%);
-}
-
-.booking[data-overlap-index="2"] {
-    left: calc(66.66%);
-}
-
-.booking[data-overlap-index="3"] {
-    left: calc(75%);
-}
-
-/* More specific overlap positioning */
+/* Overlap positioning - precise rules for each count/index combination */
 .booking[data-overlap-count="2"][data-overlap-index="0"] { left: 2px; }
 .booking[data-overlap-count="2"][data-overlap-index="1"] { left: calc(50% + 1px); }
 
@@ -355,6 +343,22 @@ body.readonly .mobile-booking {
 
 .delete-button {
     background: var(--danger);
+}
+
+/* =====================================================
+   Time Range Row (Form)
+   ===================================================== */
+
+.time-range-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.time-select {
+    flex: 1;
+    min-width: 80px;
 }
 
 /* =====================================================

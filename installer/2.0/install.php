@@ -45,11 +45,22 @@ if (!file_exists('ico')) {
     mkdir('ico', 0755, true);
 }
 
-// Download all files
+// Download all files with proper error handling
 $downloadErrors = [];
+$streamContext = stream_context_create([
+    'http' => [
+        'timeout' => 30,
+        'ignore_errors' => false
+    ],
+    'ssl' => [
+        'verify_peer' => true,
+        'verify_peer_name' => true
+    ]
+]);
+
 foreach ($files as $file) {
     $url = $sourceUrl . $file;
-    $content = @file_get_contents($url);
+    $content = file_get_contents($url, false, $streamContext);
     
     if ($content === false) {
         $downloadErrors[] = $file;

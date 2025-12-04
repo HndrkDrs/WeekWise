@@ -98,9 +98,9 @@ function isLightColor(color) {
     
     if (color.startsWith('#')) {
         const hex = color.slice(1);
-        r = parseInt(hex.substr(0, 2), 16);
-        g = parseInt(hex.substr(2, 2), 16);
-        b = parseInt(hex.substr(4, 2), 16);
+        r = parseInt(hex.slice(0, 2), 16);
+        g = parseInt(hex.slice(2, 4), 16);
+        b = parseInt(hex.slice(4, 6), 16);
     } else if (color.startsWith('rgb')) {
         const match = color.match(/(\d+)/g);
         if (match) {
