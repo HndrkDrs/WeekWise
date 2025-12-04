@@ -36,16 +36,31 @@ Die Version 2.0 bringt viele Verbesserungen:
 
 ## Installation
 
-### Version 2.0 (empfohlen)
-1. Datei `installer/2.0/install.php` auf den Webspace hochladen
+### Option 1: Git Clone (empfohlen für Plesk/cPanel)
+Das Repository ist so strukturiert, dass es direkt geklont und verwendet werden kann:
+
+1. Repository auf den Webspace klonen (z.B. über Plesk Git-Integration)
+2. `settings.json` mit folgendem Inhalt erstellen:
+   ```json
+   {
+     "title": "Wochenplan",
+     "headerColor": "#2196F3",
+     "secondaryColor": "#FFC107",
+     "startHour": "8",
+     "endHour": "22",
+     "bookingColors": [],
+     "loginhash": -1352366804
+   }
+   ```
+3. Fertig! Das Standard-Passwort ist `admin` - bitte nach dem ersten Login ändern.
+
+> **Hinweis:** Die Ordner `_archive/` (alte Versionen) und Entwicklungsdateien werden bei `git archive` automatisch ausgeschlossen.
+
+### Option 2: Installer
+1. Datei `_archive/installer/2.0/install.php` auf den Webspace hochladen
 2. `install.php` im Browser öffnen
 3. Admin-Passwort festlegen
 4. Fertig!
-
-### Version 1.2 (Legacy)
-1. Datei `installer/0.1/install.php` auf den Webspace hochladen
-2. `install.php` im Browser öffnen
-3. Den Anweisungen folgen
 
 ## iFrame-Einbettung (Beispiele)
 
@@ -78,19 +93,19 @@ Die Version 2.0 bringt viele Verbesserungen:
 ## Projektstruktur
 
 ```
-WeekWise/
-├── v2.0/                    # Aktuelle Version
-│   ├── index.html           # Haupt-Anwendung
-│   ├── style.css            # Alle Styles
-│   ├── app.js               # JavaScript
-│   ├── save_json.php        # Server-API
-│   └── ico/                 # SVG Icons
-├── Vers 1.2 (02-2025)/      # Legacy Version
-├── Vers 1.3(tbd)/           # Geplante Features (alt)
-├── installer/               # Installer-Skripte
-│   ├── 0.1/                 # Legacy Installer
-│   └── 2.0/                 # Neuer Installer
-└── README.md
+WeekWise/                    # Direkt einsatzbereit nach Git Clone
+├── index.html               # Haupt-Anwendung
+├── style.css                # Alle Styles
+├── app.js                   # JavaScript
+├── save_json.php            # Server-API
+├── ico/                     # SVG Icons
+├── README.md
+├── .gitignore               # Ignoriert settings.json, bookings.json
+├── .gitattributes           # Schließt _archive/ beim Export aus
+└── _archive/                # Alte Versionen & Installer (nicht für Produktion)
+    ├── Vers 1.2 (02-2025)/
+    ├── Vers 1.3(tbd)/
+    └── installer/
 ```
 
 ## Mitwirkung
