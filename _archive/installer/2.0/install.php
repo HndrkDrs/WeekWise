@@ -21,8 +21,8 @@ if (file_exists('index.html')) {
     exit;
 }
 
-// Source URL for installation files
-$sourceUrl = 'https://raw.githubusercontent.com/hndrk-fegko/WeekWise/main/v2.0/';
+// Source URL for installation files (files are now in root of main branch)
+$sourceUrl = 'https://raw.githubusercontent.com/hndrk-fegko/WeekWise/main/';
 
 // List of files to download
 $files = [
