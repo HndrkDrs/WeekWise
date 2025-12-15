@@ -1,4 +1,4 @@
-# WeekWise – Wochenplaner zur flexiblen Gestaltung deiner Woche
+# WeekWise – Wochenpläne zum flexiblen Verwalten und Einbinden in deine Website
 
 WeekWise ist ein benutzerfreundliches Tool zur Erstellung und Verwaltung von Wochenplänen. Es ermöglicht eine individuelle Anpassung von Farben und Kategorien direkt im UI und kann fast ohne Programmierkenntnisse genutzt werden.
 
@@ -78,10 +78,10 @@ Das Repository ist so strukturiert, dass es direkt geklont und verwendet werden 
 ## Anwendungsbeispiele
 
 - **Sportvereine:** Verwaltung von Trainingszeiten und Angeboten
-- **Familien:** Erstellung von Essensplänen
+- **Familien:** Übersicht über Wöchentliche Termine oder digitaler Stundenplan (im Heimnetzwerk)
 - **Privatpersonen:** Planung von wöchentlichen Terminen und Aufgaben
 - **Gemeinden:** Veranstaltungskalender
-- **Unternehmen:** Ressourcenplanung (Räume, Geräte)
+- **Unternehmen:** Ressourcenplanung (Räume, Geräte) - Info-Screens
 
 ## Technologien
 
@@ -115,6 +115,10 @@ Beiträge zur Weiterentwicklung von WeekWise sind willkommen!
 - Issues für Bugs und Feature-Requests
 - Pull Requests für Verbesserungen
 - Feedback zur Usability
+
+## Known Bugs
+- Neu erstellte Termine können nicht direkt einer Kategorie zugeordnet werden. Erst speichern, dann bearbeitern und zuweisen.
+- Die Passwort Felder werden beim speichern (und dadurch setzten) eines neuen Passworts nicht automatisch geleert. Müssen manuell geleert werden.
 
 ## Lizenz
 
