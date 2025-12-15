@@ -123,7 +123,8 @@ Eine formelle Open-Source-Lizenz (z.B. MIT oder GPL) wird noch hinzugefügt.
 
 ## Demo
 
-Live-Demo unter: https://weekwise.sv-wolken.de/
+Live-Demo unter: https://dev0.sv-wolken.de/ - Zugang mit dem hier angegebenen default Passwort zum ausprobieren möglich. 
+Bitte aufgeräumt hinterlassen. 
 
 ---
 
