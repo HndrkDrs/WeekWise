@@ -1,0 +1,25 @@
+# WeekWise - Git Ignore
+
+# Daten-Dateien (werden zur Laufzeit erstellt)
+settings.json
+bookings.json
+
+# Temporäre Dateien
+*.tmp
+*.bak
+*.swp
+*~
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# IDE/Editor
+.idea/
+.vscode/
+*.sublime-*
+
+# Logs
+*.log

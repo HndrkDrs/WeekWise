@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeekWise 2.0</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="ico/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Main Calendar -->
+    <div class="calendar" id="main">
+        <div class="calendar-header">
+            <h2>Wochenplan</h2>
+        </div>
+        
+        <!-- Mobile View -->
+        <div class="day-tiles" id="dayTiles">
+            <div class="day-tile">
+                <div class="day-name">Montag</div>
+                <div class="day-bookings"></div>
+            </div>
+            <div class="day-tile">
+                <div class="day-name">Dienstag</div>
+                <div class="day-bookings"></div>
+            </div>
+            <div class="day-tile">
+                <div class="day-name">Mittwoch</div>
+                <div class="day-bookings"></div>
+            </div>
+            <div class="day-tile">
+                <div class="day-name">Donnerstag</div>
+                <div class="day-bookings"></div>
+            </div>
+            <div class="day-tile">
+                <div class="day-name">Freitag</div>
+                <div class="day-bookings"></div>
+            </div>
+            <div class="day-tile">
+                <div class="day-name">Samstag</div>
+                <div class="day-bookings"></div>
+            </div>
+            <div class="day-tile">
+                <div class="day-name">Sonntag</div>
+                <div class="day-bookings"></div>
+            </div>
+            <div class="day-tile ablage-tile" id="ablage-tile">
+                <div class="day-name filing-tile">Ablage</div>
+                <div class="day-bookings"></div>
+            </div>
+        </div>
+
+        <!-- Desktop View -->
+        <div class="weekdays">
+            <div class="weekday">Montag</div>
+            <div class="weekday">Dienstag</div>
+            <div class="weekday">Mittwoch</div>
+            <div class="weekday">Donnerstag</div>
+            <div class="weekday">Freitag</div>
+            <div class="weekday">Samstag</div>
+            <div class="weekday">Sonntag</div>
+        </div>
+        <div class="day-columns" id="dayColumns"></div>
+    </div>
+
+    <!-- Floating Action Buttons -->
+    <button class="fab" id="newBookingButton" style="display:none" aria-label="Neuer Termin">
+        <span class="icon add"></span>
+    </button>
+    <button class="fab" id="editButton" aria-label="Bearbeiten">
+        <span class="icon edit"></span>
+    </button>
+
+    <!-- Login Modal -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <h3>Login</h3>
+            <div class="form-group">
+                <input type="password" id="password" placeholder="Passwort" autocomplete="current-password">
+            </div>
+            <button type="button" onclick="login()">Anmelden</button>
+            <button type="button" class="cancel-button" onclick="closeLoginModal()">Abbrechen</button>
+        </div>
+    </div>
+
+    <!-- Booking Edit Modal -->
+    <div class="modal" id="bookingModal">
+        <div class="modal-content">
+            <h3>Termin Details</h3>
+            <form id="bookingForm">
+                <div class="form-group">
+                    <label for="bookingDay">Tag</label>
+                    <select id="bookingDay" required>
+                        <option value="Montag">Montag</option>
+                        <option value="Dienstag">Dienstag</option>
+                        <option value="Mittwoch">Mittwoch</option>
+                        <option value="Donnerstag">Donnerstag</option>
+                        <option value="Freitag">Freitag</option>
+                        <option value="Samstag">Samstag</option>
+                        <option value="Sonntag">Sonntag</option>
+                        <option value="Ablage">Ablage</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bookingTitle">Titel</label>
+                    <input type="text" id="bookingTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookingLocation">Ort/Treffpunkt</label>
+                    <input type="text" id="bookingLocation">
+                </div>
+                <div class="form-group">
+                    <label>Zeitraum</label>
+                    <div class="time-range-row">
+                        <span>von</span>
+                        <select id="bookingStart" required class="time-select"></select>
+                        <span>bis</span>
+                        <select id="bookingEnd" required class="time-select"></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="bookingTrainer">Trainer/Verantwortliche (einer pro Zeile)</label>
+                    <textarea id="bookingTrainer" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="bookingContact">Kontakt</label>
+                    <input type="text" id="bookingContact">
+                </div>
+                <div class="form-group">
+                    <label for="bookingLink">Link</label>
+                    <input type="url" id="bookingLink" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label for="bookingDescription">Beschreibung</label>
+                    <textarea id="bookingDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="bookingCategory">Kategorie</label>
+                    <select id="bookingCategory">
+                        <option value="default">Standard</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
+                    <button type="submit">Speichern</button>
+                    <button type="button" class="delete-button" id="modalDeleteButton" style="display:none">Löschen</button>
+                    <button type="button" class="cancel-button" onclick="closeBookingModal()">Abbrechen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="optionsModal">
+        <div class="modal-content">
+            <h3>Einstellungen</h3>
+            <div class="form-group">
+                <label for="calendarTitle">Titel</label>
+                <input type="text" id="calendarTitle" value="Wochenplan">
+            </div>
+            <div class="form-group">
+                <label>Layout</label>
+                <div class="color-edit header-color-edit">
+                    <div class="color-swatch" style="background-color: var(--primary)"></div>
+                    <input type="text" value="Kopfbalken" readonly>
+                </div>
+                <div class="color-edit secondary-color-edit">
+                    <div class="color-swatch" style="background-color: var(--secondary)"></div>
+                    <input type="text" value="Sekundärfarbe (Standard)" readonly>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Kategorien</label>
+                <div id="bookingColors"></div>
+            </div>
+            <div class="form-group">
+                <label>Zeitbereich</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <select id="startHour"></select>
+                    <span>bis</span>
+                    <select id="endHour"></select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Export/Import</label>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" onclick="exportBookings()">Termine exportieren</button>
+                    <input type="file" id="importFile" style="display:none" accept=".json">
+                    <button type="button" onclick="document.getElementById('importFile').click()">Termine importieren</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Passwort ändern</label>
+                <input type="password" id="oldpwd" placeholder="Altes Passwort" autocomplete="current-password">
+                <input type="password" id="newpwd" placeholder="Neues Passwort" autocomplete="new-password" style="margin-top: 5px;">
+            </div>
+            <div class="form-group" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
+                <button type="button" onclick="saveSettings()">Speichern</button>
+                <button type="button" onclick="logout()" class="danger-button">Ausloggen</button>
+                <button type="button" class="cancel-button" onclick="closeOptionsModal()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Booking Modal -->
+    <div class="modal" id="viewBookingModal">
+        <div class="modal-content">
+            <div class="view-booking-header">
+                <h3 id="viewBookingTitle"></h3>
+                <h4 id="viewBookingLocation"></h4>
+                <div id="viewBookingTrainers" class="trainer-tags"></div>
+            </div>
+            <div id="viewBookingTime"></div>
+            <div id="viewBookingContact" class="contact-info"></div>
+            <div id="viewBookingDescription" class="description-box"></div>
+            <div id="viewBookingLink"></div>
+            <button type="button" class="cancel-button" onclick="closeViewBookingModal()">Schließen</button>
+        </div>
+    </div>
+
+    <!-- Sidebar (Ablage) -->
+    <div id="sidebar" class="sidebar-container">
+        <button class="sidebar-toggle openbtn" onclick="toggleSidebar()" aria-label="Sidebar öffnen">
+            <span class="icon chevron-left"></span>
+        </button>
+        <button class="sidebar-toggle closebtn" onclick="toggleSidebar()" aria-label="Sidebar schließen">
+            <span class="icon chevron-right"></span>
+        </button>
+        <div id="contentSidebar" class="sidebar">
+            <div class="weekday" id="Ablage">Ablage</div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
