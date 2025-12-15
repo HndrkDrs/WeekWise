@@ -1,0 +1,9 @@
+# WeekWise - Git Attributes
+# Diese Dateien werden beim `git archive` (z.B. beim Klonen über Plesk) ausgeschlossen
+
+# Archivordner mit alten Versionen und Installer ausschließen
+_archive/ export-ignore
+
+# Entwicklungsdateien ausschließen
+ROADMAP.md export-ignore
+.gitattributes export-ignore
