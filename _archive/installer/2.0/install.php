@@ -13,11 +13,39 @@ if (!isset($_POST['password']) || $_POST['password'] === '') {
 }
 
 // Get the password from the form
-$password = $_POST['password'];
+$password = isset($_POST['password']) ? trim((string)$_POST['password']) : '';
+
+// Check if installation is to clean space,
+// update an existing installation
+// or working in a directory containing other files.
+
+// collect all files (no folders) except install.php
+$filesInDir = [];
+foreach (array_diff(scandir('.'), ['.', '..', 'install.php']) as $item) {
+    if (is_file($item)) {
+        $filesInDir[] = $item;
+    }
+}
 
 // Check if index.html already exists
-if (file_exists('index.html')) {
-    showError('Es existiert bereits eine Datei namens "index.html" im aktuellen Verzeichnis. Bitte lösche diese Datei und starte den Installationsprozess erneut.');
+$fileExists = file_exists('index.html');
+
+// Check if settings.json already exists
+$settingsExists = file_exists('settings.json');
+
+// Check if bookings.json already exists
+$bookingsExists = file_exists('bookings.json');
+
+// Logic to determine installation type
+if ($fileExists && $settingsExists && $bookingsExists) {
+    // Existing installation detected
+    showError('Eine bestehende Installation von WeekWise wurde erkannt. Möchten sie die Anwendung neu installieren? Dann löschen Sie die index.html und starten Sie die Installation neu. Möchten sie die Anwendung aktualisieren? Sichern sie bookings.json und settings.json in einem Unterverzeichnis und überschreiben Sie damit die neu installierten Dateien nach der Installation. (Termine können auch uber die UI importiert/exportiert werden)');
+    exit;
+}
+
+// Any other files present -> likely not an empty target directory
+if (!empty($filesInDir)) {
+    showError('Das Verzeichnis ist nicht leer. Möglicherweise befindet sich eine andere Anwendung/Website in diesem Verzeichnis. Bitte zunächst prüfen und die Dateien löschen.');
     exit;
 }
 
