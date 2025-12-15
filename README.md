@@ -49,10 +49,10 @@ Das Repository ist so strukturiert, dass es direkt geklont und verwendet werden 
      "startHour": "8",
      "endHour": "22",
      "bookingColors": [],
-     "loginhash": -1352366804
+     "loginhash": 108819879
    }
    ```
-3. Fertig! Das Standard-Passwort ist `admin` - bitte nach dem ersten Login ändern.
+3. Fertig! Das Standard-Passwort ist `123ChangeMe!` - bitte nach dem ersten Login ändern.
 
 > **Hinweis:** Die Ordner `_archive/` (alte Versionen) und Entwicklungsdateien werden bei `git archive` automatisch ausgeschlossen.
 
