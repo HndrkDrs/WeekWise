@@ -1,5 +1,5 @@
 /* =====================================================
-   WeekWise 2.0 - Stylesheet
+   WeekWise 2.1 - Stylesheet
    ===================================================== */
 
 :root {
@@ -205,6 +205,11 @@ body.readonly .mobile-booking {
     grid-template-columns: repeat(7, 1fr);
     background: var(--bg-light);
     border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+}
+
+.weekdays.event-scroll {
+    grid-template-columns: repeat(var(--day-count, 7), minmax(120px, 1fr));
 }
 
 .weekday {
@@ -216,6 +221,12 @@ body.readonly .mobile-booking {
 .day-columns {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+    overflow-x: auto;
+}
+
+/* When event mode has many days, ensure columns don't get too narrow */
+.day-columns.event-scroll {
+    grid-template-columns: repeat(var(--day-count, 7), minmax(120px, 1fr));
 }
 
 .day-column {
@@ -518,6 +529,60 @@ body.readonly .mobile-booking {
     box-shadow: 0 4px 20px var(--shadow);
     max-height: 90vh;
     overflow-y: auto;
+}
+
+/* Settings modal needs more width for day checkboxes */
+#optionsModal .modal-content {
+    max-width: 520px;
+}
+
+/* Settings Section Dividers */
+.settings-section-divider {
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 4px;
+    margin: 20px 0 12px;
+}
+
+/* Mode Toggle */
+.mode-toggle {
+    display: flex;
+    gap: 16px;
+}
+
+.mode-option {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
+    font-weight: normal !important;
+    cursor: pointer;
+    user-select: none;
+}
+
+.mode-option input[type="radio"] {
+    width: auto;
+    margin: 0;
+}
+
+/* Event Mode Preview */
+.event-day-preview {
+    font-size: 0.85em;
+    color: var(--text-light);
+    background: var(--bg-light);
+    padding: 8px 10px;
+    border-radius: 4px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+/* Event Mode Date/Count Inputs */
+#eventStartDate,
+#eventDayCount {
+    max-width: 200px;
 }
 
 .form-group {
@@ -1018,7 +1083,6 @@ textarea:focus-visible {
 
 @media print {
     @page {
-        size: A4 landscape;
         margin: 10mm;
     }
     
@@ -1045,6 +1109,7 @@ textarea:focus-visible {
     .weekdays,
     .day-columns {
         display: grid !important;
+        overflow-x: visible;
     }
     
     .calendar {
@@ -1055,6 +1120,7 @@ textarea:focus-visible {
     
     .day-column {
         overflow: visible;
+        max-width: 280px;
     }
     
     /* Hide greyed-out columns in print */
@@ -1095,5 +1161,20 @@ textarea:focus-visible {
     
     .booking-time {
         font-size: 0.65em;
+    }
+    
+    /* Auto-scale: fit day columns to page height */
+    .day-columns {
+        max-height: calc(100vh - 60px);
+    }
+    
+    .day-column {
+        height: auto !important;
+        min-height: 0 !important;
+    }
+    
+    /* Portrait: narrower max-width per column */
+    body.print-portrait .day-column {
+        max-width: 200px;
     }
 }

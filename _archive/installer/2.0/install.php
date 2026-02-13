@@ -62,6 +62,7 @@ $files = [
     'ico/del.svg',
     'ico/edit.svg',
     'ico/link.svg',
+    'ico/print.svg',
     'ico/settings.svg',
     'ico/chevron-left.svg',
     'ico/chevron-right.svg',
