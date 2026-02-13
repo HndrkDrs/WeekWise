@@ -13,6 +13,25 @@
 
 const CONFIG = {
     DAYS: ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag', 'Ablage'],
+    DAY_ALIASES: {
+        // German full
+        'montag': 'Montag', 'dienstag': 'Dienstag', 'mittwoch': 'Mittwoch',
+        'donnerstag': 'Donnerstag', 'freitag': 'Freitag', 'samstag': 'Samstag', 'sonntag': 'Sonntag',
+        // German short
+        'mo': 'Montag', 'di': 'Dienstag', 'mi': 'Mittwoch',
+        'do': 'Donnerstag', 'fr': 'Freitag', 'sa': 'Samstag', 'so': 'Sonntag',
+        // English full
+        'monday': 'Montag', 'tuesday': 'Dienstag', 'wednesday': 'Mittwoch',
+        'thursday': 'Donnerstag', 'friday': 'Freitag', 'saturday': 'Samstag', 'sunday': 'Sonntag',
+        // English short
+        'mon': 'Montag', 'tue': 'Dienstag', 'wed': 'Mittwoch',
+        'thu': 'Donnerstag', 'fri': 'Freitag', 'sat': 'Samstag', 'sun': 'Sonntag',
+        // Numbers (1=Monday)
+        '1': 'Montag', '2': 'Dienstag', '3': 'Mittwoch',
+        '4': 'Donnerstag', '5': 'Freitag', '6': 'Samstag', '7': 'Sonntag',
+        '01': 'Montag', '02': 'Dienstag', '03': 'Mittwoch',
+        '04': 'Donnerstag', '05': 'Freitag', '06': 'Samstag', '07': 'Sonntag'
+    },
     DEFAULT_START_HOUR: 8,
     DEFAULT_END_HOUR: 22,
     DEFAULT_HASH: -1352366804, // Default password hash
@@ -33,14 +52,45 @@ const state = {
 // URL Parameter Handling (Embedded Mode)
 // =====================================================
 
+/**
+ * Parse a flexible day input string to canonical German day name.
+ * Accepts: Montag, monday, Mo, MO, 1, 01, etc.
+ */
+function parseDayInput(input) {
+    if (!input) return null;
+    return CONFIG.DAY_ALIASES[input.trim().toLowerCase()] || null;
+}
+
+/**
+ * Parse a comma-separated list of day inputs to canonical day names.
+ * Deduplicates results.
+ */
+function parseDayList(input) {
+    if (!input) return [];
+    const parsed = input.split(',').map(parseDayInput).filter(Boolean);
+    return [...new Set(parsed)];
+}
+
 function parseUrlParams() {
     const params = new URLSearchParams(window.location.search);
+    
+    // Parse day parameter: supports single or comma-separated, flexible formats
+    // ?day=Montag,Mittwoch → show only these days (positive filter)
+    const dayParam = params.get('day');
+    const parsedDays = parseDayList(dayParam);
+    
+    // ?hide=Samstag,Sonntag → hide these days (negative filter, adds to settings)
+    const hideParam = params.get('hide');
+    const parsedHide = parseDayList(hideParam);
+    
     state.urlParams = {
         embedded: params.get('embedded') === 'true',
         category: params.get('category'),
-        day: params.get('day'),
+        days: parsedDays, // Positive filter: show only these (can be empty = show all)
+        hideDays: parsedHide, // Negative filter: hide these additionally
         readonly: params.get('readonly') === 'true',
-        compact: params.get('compact') === 'true'
+        compact: params.get('compact') === 'true',
+        hideempty: params.get('hideempty') === 'true'
     };
     
     // Apply body classes for embedded modes
@@ -156,6 +206,63 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// =====================================================
+// Print Functions
+// =====================================================
+
+function togglePrintPopup() {
+    const popup = document.getElementById('printPopup');
+    if (!popup) return;
+    
+    const isVisible = popup.classList.contains('visible');
+    if (isVisible) {
+        popup.classList.remove('visible');
+        return;
+    }
+    
+    // Populate category dropdown
+    const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+    const categorySelect = document.getElementById('printCategory');
+    categorySelect.innerHTML = '<option value="">Alle</option>';
+    bookingColors.forEach(color => {
+        const option = document.createElement('option');
+        option.textContent = color.name;
+        option.value = color.id;
+        categorySelect.appendChild(option);
+    });
+    
+    popup.classList.add('visible');
+}
+
+function executePrint() {
+    const withHeader = document.getElementById('printWithHeader').checked;
+    const withColors = document.getElementById('printWithColors').checked;
+    const category = document.getElementById('printCategory').value;
+    
+    // Apply print classes
+    if (!withHeader) document.body.classList.add('print-no-header');
+    if (!withColors) document.body.classList.add('print-no-colors');
+    if (category) {
+        // Hide bookings not matching category
+        document.querySelectorAll('.booking').forEach(el => {
+            const idx = parseInt(el.dataset.index);
+            const booking = state.bookings[idx];
+            if (booking && booking.categoryID !== category) {
+                el.classList.add('print-hidden');
+            }
+        });
+    }
+    
+    // Close popup before print
+    document.getElementById('printPopup').classList.remove('visible');
+    
+    window.print();
+    
+    // Clean up after print
+    document.body.classList.remove('print-no-header', 'print-no-colors');
+    document.querySelectorAll('.print-hidden').forEach(el => el.classList.remove('print-hidden'));
 }
 
 // =====================================================
@@ -313,6 +420,41 @@ function populateTimeOptions() {
 }
 
 // =====================================================
+// Day Visibility Logic
+// =====================================================
+
+/**
+ * Determine which days to show based on:
+ * 1. ?day= URL param: positive filter (show only these days)
+ * 2. ?hide= URL param: negative filter (hide these days, adds to settings)
+ * 3. hiddenDays from settings (global filter)
+ * 4. hideEmptyDays from settings or ?hideempty=true
+ * For admin: hidden/empty days are shown greyed out instead of removed.
+ */
+function getDaysToShow() {
+    const allDays = CONFIG.DAYS.slice(0, 7); // Exclude 'Ablage'
+    const hiddenDays = JSON.parse(localStorage.getItem('hiddenDays') || '[]');
+    const hideEmptyDays = localStorage.getItem('hideEmptyDays') === 'true' || state.urlParams.hideempty;
+    const daysWithBookings = new Set(state.bookings.map(b => b.day));
+    
+    // Combine all hidden day sources: settings + ?hide= param
+    const allHiddenDays = new Set([...hiddenDays, ...state.urlParams.hideDays]);
+    
+    return allDays.map(day => {
+        // Positive filter: ?day= restricts to only named days
+        const hiddenByDayParam = state.urlParams.days.length > 0 && !state.urlParams.days.includes(day);
+        // Negative filter: settings hiddenDays + ?hide= param
+        const hiddenBySetting = allHiddenDays.has(day);
+        // Empty filter
+        const isEmpty = !daysWithBookings.has(day);
+        const hiddenByEmpty = hideEmptyDays && isEmpty;
+        
+        const isHidden = hiddenByDayParam || hiddenBySetting || hiddenByEmpty;
+        return { day, hidden: isHidden, empty: isEmpty };
+    });
+}
+
+// =====================================================
 // Day Columns (Desktop View)
 // =====================================================
 
@@ -325,28 +467,22 @@ function createDayColumns() {
     const endHour = parseInt(localStorage.getItem('endHour') || CONFIG.DEFAULT_END_HOUR);
     const totalHeight = (endHour - startHour) * 60;
     
-    // Filter days based on URL parameter
-    let daysToShow = CONFIG.DAYS.slice(0, 7); // Exclude 'Ablage' from main view
-    if (state.urlParams.day) {
-        const dayIndex = CONFIG.DAYS.indexOf(state.urlParams.day);
-        if (dayIndex !== -1 && dayIndex < 7) {
-            daysToShow = [state.urlParams.day];
-        }
-    }
+    const dayInfo = getDaysToShow();
+    const visibleDays = dayInfo.filter(d => !d.hidden || state.isLoggedIn);
     
     // Update weekdays header
     const weekdaysContainer = document.querySelector('.weekdays');
-    if (weekdaysContainer && state.urlParams.day) {
-        weekdaysContainer.innerHTML = daysToShow.map(day => 
-            `<div class="weekday">${escapeHtml(day)}</div>`
+    if (weekdaysContainer) {
+        weekdaysContainer.innerHTML = visibleDays.map(d => 
+            `<div class="weekday${d.hidden ? ' weekday-hidden' : ''}">${escapeHtml(d.day)}</div>`
         ).join('');
-        weekdaysContainer.style.gridTemplateColumns = `repeat(${daysToShow.length}, 1fr)`;
-        container.style.gridTemplateColumns = `repeat(${daysToShow.length}, 1fr)`;
+        weekdaysContainer.style.gridTemplateColumns = `repeat(${visibleDays.length}, 1fr)`;
+        container.style.gridTemplateColumns = `repeat(${visibleDays.length}, 1fr)`;
     }
     
-    daysToShow.forEach(day => {
+    visibleDays.forEach(({ day, hidden }) => {
         const column = document.createElement('div');
-        column.className = 'day-column';
+        column.className = 'day-column' + (hidden ? ' day-column-hidden' : '');
         column.dataset.day = day;
         column.style.height = `${totalHeight}px`;
         
@@ -454,7 +590,7 @@ function createBookingElement(booking, index, isMobile) {
     el.className = isMobile ? 'mobile-booking' : 'booking';
     el.dataset.index = index;
     
-    const bgColor = rgbToHex(booking.color) || booking.color || 'var(--secondary)';
+    const bgColor = sanitizeColor(rgbToHex(booking.color) || booking.color || 'var(--secondary)');
     el.style.backgroundColor = bgColor;
     
     // Add light/dark class for text contrast
@@ -559,23 +695,24 @@ function renderMobileBookings(bookings) {
         existingBookings.forEach(b => b.remove());
     });
     
-    // Filter days based on URL parameter
-    let daysToShow = CONFIG.DAYS;
-    if (state.urlParams.day) {
-        const dayIndex = CONFIG.DAYS.indexOf(state.urlParams.day);
-        if (dayIndex !== -1) {
-            // Hide other day tiles
-            mobileColumns.forEach((column, index) => {
-                const dayName = column.querySelector('.day-name');
-                if (dayName && !dayName.textContent.includes(state.urlParams.day)) {
-                    column.style.display = 'none';
-                } else {
-                    column.style.display = 'block';
-                }
-            });
-            daysToShow = [state.urlParams.day];
+    // Apply day visibility (same logic as desktop)
+    const dayInfo = getDaysToShow();
+    mobileColumns.forEach((column, index) => {
+        if (index >= 7) return; // Skip Ablage tile
+        const info = dayInfo[index];
+        if (!info) return;
+        
+        if (info.hidden && !state.isLoggedIn) {
+            column.style.display = 'none';
+        } else {
+            column.style.display = 'block';
+            if (info.hidden && state.isLoggedIn) {
+                column.classList.add('day-tile-hidden');
+            } else {
+                column.classList.remove('day-tile-hidden');
+            }
         }
-    }
+    });
     
     bookings.forEach((booking, index) => {
         const dayIndex = CONFIG.DAYS.indexOf(booking.day);
@@ -691,7 +828,7 @@ function showBookingDetails(booking) {
     descriptionDiv.innerHTML = booking.description ? escapeHtml(booking.description).replace(/\n/g, '<br>') : '';
     descriptionDiv.style.display = booking.description ? 'block' : 'none';
     
-    document.querySelector('.view-booking-header').style.backgroundColor = booking.color;
+    document.querySelector('.view-booking-header').style.backgroundColor = sanitizeColor(booking.color);
     
     const linkDiv = document.getElementById('viewBookingLink');
     if (booking.link) {
@@ -752,7 +889,7 @@ async function deleteBooking(index) {
     if (confirm('Möchten Sie diesen Termin wirklich löschen?')) {
         state.bookings.splice(index, 1);
         await saveToServer('bookings.json', state.bookings);
-        renderBookings();
+        createDayColumns(); // Rebuild grid (hideEmptyDays may change visible columns)
         closeBookingModal();
     }
 }
@@ -771,13 +908,15 @@ function closeBookingModal() {
 function login() {
     const passwordInput = document.getElementById('password');
     const password = stringToHash(passwordInput.value);
-    const storedHash = parseInt(localStorage.getItem('loginhash'), 10);
+    const storedHash = Number(localStorage.getItem('loginhash'));
     
-    if (password === storedHash) {
+    if (!isNaN(storedHash) && password === storedHash) {
         state.isLoggedIn = true;
         document.getElementById('editButton').innerHTML = '<span class="icon settings"></span>';
         document.getElementById('newBookingButton').style.display = 'flex';
+        document.getElementById('printButton').style.display = 'flex';
         closeLoginModal();
+        createDayColumns(); // Re-render to show greyed-out hidden days
         renderBookings();
         toggleSidebar(true);
     } else {
@@ -790,10 +929,14 @@ function logout() {
         state.isLoggedIn = false;
         document.getElementById('editButton').innerHTML = '<span class="icon edit"></span>';
         document.getElementById('newBookingButton').style.display = 'none';
+        document.getElementById('printButton').style.display = 'none';
+        // Close print popup if open
+        document.getElementById('printPopup')?.classList.remove('visible');
         closeOptionsModal();
         if (state.sidebarOpen) {
             toggleSidebar(true);
         }
+        createDayColumns(); // Re-render to hide greyed-out days
         renderBookings();
     }
 }
@@ -827,9 +970,34 @@ async function showOptionsModal() {
     document.getElementById('startHour').value = localStorage.getItem('startHour') || CONFIG.DEFAULT_START_HOUR;
     document.getElementById('endHour').value = localStorage.getItem('endHour') || CONFIG.DEFAULT_END_HOUR;
     
+    // Hidden days checkboxes
+    const hiddenDays = JSON.parse(localStorage.getItem('hiddenDays') || '[]');
+    document.querySelectorAll('#hiddenDaysCheckboxes input[type="checkbox"]').forEach(cb => {
+        cb.checked = !hiddenDays.includes(cb.value);
+    });
+    
+    // Hide empty days
+    document.getElementById('hideEmptyDays').checked = localStorage.getItem('hideEmptyDays') === 'true';
+    
     // Booking colors
     await updateCategorySelect();
     renderColorOptions();
+}
+
+/**
+ * Sanitize a CSS color value to prevent injection
+ */
+function sanitizeColor(color) {
+    if (!color) return '#000000';
+    // Allow hex colors
+    if (/^#[0-9a-fA-F]{3,8}$/.test(color)) return color;
+    // Allow rgb/rgba
+    if (/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+\s*)?\)$/.test(color)) return color;
+    // Allow CSS variables
+    if (/^var\(--[a-zA-Z0-9-]+\)$/.test(color)) return color;
+    // Allow named CSS colors (basic set)
+    if (/^[a-zA-Z]+$/.test(color)) return color;
+    return '#000000';
 }
 
 function renderColorOptions() {
@@ -843,11 +1011,18 @@ function renderColorOptions() {
         const colorEdit = document.createElement('div');
         colorEdit.className = 'color-edit';
         colorEdit.id = id;
-        colorEdit.innerHTML = `
-            <div class="color-swatch" style="background-color: ${color}"></div>
-            <input type="text" value="${escapeHtml(name)}" placeholder="Kategoriename">
-            <span class="icon del color-delete"></span>
-        `;
+        const swatch = document.createElement('div');
+        swatch.className = 'color-swatch';
+        swatch.style.backgroundColor = sanitizeColor(color);
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = name;
+        input.placeholder = 'Kategoriename';
+        const delIcon = document.createElement('span');
+        delIcon.className = 'icon del color-delete';
+        colorEdit.appendChild(swatch);
+        colorEdit.appendChild(input);
+        colorEdit.appendChild(delIcon);
         container.appendChild(colorEdit);
     });
     
@@ -859,11 +1034,17 @@ function renderColorOptions() {
         const colorEdit = document.createElement('div');
         colorEdit.className = 'color-edit';
         colorEdit.id = newId;
-        colorEdit.innerHTML = `
-            <div class="color-swatch" style="background-color: #2196F3"></div>
-            <input type="text" placeholder="Name">
-            <span class="icon del color-delete"></span>
-        `;
+        const swatch = document.createElement('div');
+        swatch.className = 'color-swatch';
+        swatch.style.backgroundColor = '#2196F3';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Name';
+        const delIcon = document.createElement('span');
+        delIcon.className = 'icon del color-delete';
+        colorEdit.appendChild(swatch);
+        colorEdit.appendChild(input);
+        colorEdit.appendChild(delIcon);
         container.insertBefore(colorEdit, addBtn);
     };
     container.appendChild(addBtn);
@@ -894,8 +1075,8 @@ async function saveSettings() {
     const newPwdInput = document.getElementById('newpwd');
     
     if (oldPwdInput.value) {
-        const oldHash = localStorage.getItem('loginhash');
-        if (parseInt(oldHash) !== stringToHash(oldPwdInput.value)) {
+        const oldHash = Number(localStorage.getItem('loginhash'));
+        if (isNaN(oldHash) || oldHash !== stringToHash(oldPwdInput.value)) {
             alert('Das alte Passwort ist falsch');
             return;
         }
@@ -914,8 +1095,23 @@ async function saveSettings() {
             alert('Das Passwort wurde nicht aktualisiert');
             return;
         }
-        localStorage.setItem('loginhash', stringToHash(newPwdInput.value));
     }
+    
+    // Determine loginhash: new password if changed, otherwise current value
+    const newLoginhash = newPwdInput.value
+        ? stringToHash(newPwdInput.value)
+        : Number(localStorage.getItem('loginhash'));
+    
+    // Hidden days (unchecked = hidden)
+    const hiddenDays = [];
+    document.querySelectorAll('#hiddenDaysCheckboxes input[type="checkbox"]').forEach(cb => {
+        if (!cb.checked) hiddenDays.push(cb.value);
+    });
+    localStorage.setItem('hiddenDays', JSON.stringify(hiddenDays));
+    
+    // Hide empty days
+    const hideEmptyDays = document.getElementById('hideEmptyDays').checked;
+    localStorage.setItem('hideEmptyDays', String(hideEmptyDays));
     
     // Booking colors
     const bookingColors = Array.from(document.querySelectorAll('#bookingColors .color-edit')).map(el => ({
@@ -932,12 +1128,16 @@ async function saveSettings() {
         startHour,
         endHour,
         bookingColors,
-        loginhash: localStorage.getItem('loginhash')
+        hiddenDays,
+        hideEmptyDays,
+        loginhash: newLoginhash
     };
     
     await saveToServer('settings.json', configData);
     await saveToServer('bookings.json', state.bookings);
     
+    // Only persist hash to localStorage after successful server save
+    localStorage.setItem('loginhash', String(newLoginhash));
     localStorage.setItem('bookingColors', JSON.stringify(bookingColors));
     
     createTimeOptions();
@@ -1030,6 +1230,8 @@ function initializeDefaults() {
     localStorage.setItem('endHour', CONFIG.DEFAULT_END_HOUR);
     localStorage.setItem('bookingColors', '[]');
     localStorage.setItem('loginhash', CONFIG.DEFAULT_HASH);
+    localStorage.setItem('hiddenDays', '[]');
+    localStorage.setItem('hideEmptyDays', 'false');
     document.documentElement.style.setProperty('--header-color', '#2196F3');
     state.bookings.length = 0;
     createTimeOptions();
@@ -1054,7 +1256,9 @@ async function initialize() {
             localStorage.setItem('startHour', config.startHour || CONFIG.DEFAULT_START_HOUR);
             localStorage.setItem('endHour', config.endHour || CONFIG.DEFAULT_END_HOUR);
             localStorage.setItem('bookingColors', JSON.stringify(config.bookingColors || []));
-            localStorage.setItem('loginhash', config.loginhash || CONFIG.DEFAULT_HASH);
+            localStorage.setItem('loginhash', String(Number(config.loginhash) || CONFIG.DEFAULT_HASH));
+            localStorage.setItem('hiddenDays', JSON.stringify(config.hiddenDays || []));
+            localStorage.setItem('hideEmptyDays', String(config.hideEmptyDays || false));
         } else {
             initializeDefaults();
         }
@@ -1098,6 +1302,21 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('loginModal').style.display = 'flex';
         } else {
             showOptionsModal();
+        }
+    });
+    
+    // Print button
+    document.getElementById('printButton')?.addEventListener('click', () => {
+        togglePrintPopup();
+    });
+    
+    // Close print popup on outside click
+    document.addEventListener('click', (e) => {
+        const popup = document.getElementById('printPopup');
+        const printBtn = document.getElementById('printButton');
+        if (popup && popup.classList.contains('visible') &&
+            !popup.contains(e.target) && !printBtn.contains(e.target)) {
+            popup.classList.remove('visible');
         }
     });
     
@@ -1148,6 +1367,12 @@ document.addEventListener('DOMContentLoaded', () => {
             color: selectedColor
         };
         
+        // Validate: endTime must be after startTime
+        if (timeToMinutes(newBooking.endTime) <= timeToMinutes(newBooking.startTime)) {
+            alert('Die Endzeit muss nach der Startzeit liegen.');
+            return;
+        }
+        
         if (state.selectedBookingIndex !== null) {
             state.bookings[state.selectedBookingIndex] = newBooking;
         } else {
@@ -1155,7 +1380,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         await saveToServer('bookings.json', state.bookings);
-        renderBookings();
+        createDayColumns(); // Rebuild grid (hideEmptyDays may change visible columns)
         closeBookingModal();
     });
     
@@ -1219,6 +1444,31 @@ document.addEventListener('DOMContentLoaded', () => {
             login();
         }
     });
+    
+    // Escape key closes any open modal or popup
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            // Close print popup first if visible
+            const printPopup = document.getElementById('printPopup');
+            if (printPopup && printPopup.classList.contains('visible')) {
+                printPopup.classList.remove('visible');
+                return;
+            }
+            
+            const modals = [
+                { el: document.getElementById('loginModal'), close: closeLoginModal },
+                { el: document.getElementById('bookingModal'), close: closeBookingModal },
+                { el: document.getElementById('viewBookingModal'), close: closeViewBookingModal },
+                { el: document.getElementById('optionsModal'), close: closeOptionsModal }
+            ];
+            for (const modal of modals) {
+                if (modal.el && modal.el.style.display === 'flex') {
+                    modal.close();
+                    break;
+                }
+            }
+        }
+    });
 });
 
 // Expose functions to global scope for onclick handlers
@@ -1231,3 +1481,5 @@ window.closeViewBookingModal = closeViewBookingModal;
 window.closeOptionsModal = closeOptionsModal;
 window.saveSettings = saveSettings;
 window.exportBookings = exportBookings;
+window.executePrint = executePrint;
+window.togglePrintPopup = togglePrintPopup;

@@ -2,28 +2,39 @@
 
 WeekWise ist ein benutzerfreundliches Tool zur Erstellung und Verwaltung von Wochenplänen. Es ermöglicht eine individuelle Anpassung von Farben und Kategorien direkt im UI und kann fast ohne Programmierkenntnisse genutzt werden.
 
-## 🆕 Version 2.0 - Neu!
-
-Die Version 2.0 bringt viele Verbesserungen:
+## 🆕 Version 2.1
 
 ### Neue Features
-- **Überlappende Termine** werden jetzt nebeneinander dargestellt statt übereinander
-- **iFrame-Einbettung** mit URL-Parametern:
-  - `?embedded=true` - Versteckt alle Bedienelemente
-  - `?category=Jugend` - Zeigt nur Termine einer Kategorie
-  - `?day=Montag` - Zeigt nur einen bestimmten Tag
-  - `?readonly=true` - Deaktiviert alle Interaktionen
-  - `?compact=true` - Kompakte Darstellung ohne Header
+- **Druckansicht** – Druckt den Plan als A4 Landscape (z.B. zum Aushängen). Optionen: mit/ohne Header, mit/ohne Farben, nach Kategorie gefiltert
+- **Tage ausblenden** – Wochentage können in den Einstellungen global ausgeblendet werden (z.B. Wochenende)
+- **Leere Tage ausblenden** – Tage ohne Termine können automatisch ausgeblendet werden (Setting + URL-Parameter)
+- **Flexibler Day-Parser** – URL-Parameter akzeptieren verschiedene Formate: `Montag`, `Mo`, `monday`, `1` etc.
+- **Mehrere Tage filtern** – `?day=Mo,Mi,Fr` zeigt nur diese Tage, `?hide=Sa,So` blendet Tage aus
+- **Admin-Ansicht** – Ausgeblendete Tage werden für eingeloggte Admins grau/gestreift statt unsichtbar dargestellt
+- **Keyboard-Navigation** – Alle Modals mit Escape schließbar, Focus-Visible-Styles für Tastaturnutzer
+- **Verbesserte Sicherheit** – XSS-Schutz für Farbwerte, robuster Passwort-Hash-Vergleich
+
+### Bugfixes (gegenüber 2.0)
+- Hash-Vergleich bei Login konnte unter bestimmten Umständen fehlschlagen
+- Passwort-Änderung wurde in localStorage geschrieben bevor der Server-Save erfolgreich war
+- Endzeit konnte vor Startzeit liegen → kaputte Darstellung
+- FAB-Buttons überlappten sich auf Desktop
+- CSS-Transitions verursachten unnötige Layout-Reflows
+
+## Version 2.0
+
+- **Überlappende Termine** werden nebeneinander dargestellt statt übereinander
+- **iFrame-Einbettung** mit URL-Parametern (siehe unten)
 - **Verbesserte Mobile-Ansicht** mit Touch-optimierten Elementen
-- **Automatische Textfarben** - Text wird automatisch hell/dunkel je nach Hintergrundfarbe
-- **Bessere Sicherheit** im PHP-Backend (Whitelist für Dateinamen, File-Locking)
+- **Automatische Textfarben** – Text wird automatisch hell/dunkel je nach Hintergrundfarbe
+- **Sicheres PHP-Backend** (Whitelist für Dateinamen, File-Locking)
 - **Loading-Indikator** beim Speichern/Laden
 - **SVG-Icons** für Sidebar statt Unicode-Zeichen (bessere Kompatibilität)
 
 ### Optimiert für
-- ✅ **Jeden Webspace** - Nur HTML, CSS, JS und minimales PHP erforderlich
-- ✅ **Zero Maintenance** - Nach Einrichtung kein Eingriff mehr nötig
-- ✅ **iFrame-Integration** - Ideal zum Einbetten auf bestehenden Websites
+- ✅ **Jeden Webspace** – Nur HTML, CSS, JS und minimales PHP erforderlich
+- ✅ **Zero Maintenance** – Nach Einrichtung kein Eingriff mehr nötig
+- ✅ **iFrame-Integration** – Ideal zum Einbetten auf bestehenden Websites
 
 ## Funktionen
 
@@ -33,6 +44,8 @@ Die Version 2.0 bringt viele Verbesserungen:
 - **Übersichtliche Darstellung:** Klar strukturierte Anzeige des Wochenplans
 - **Mobile Ansicht:** Für Mobilgeräte optimierte Darstellung
 - **Ablage:** Termine können "geparkt" werden und sind nur für Admins sichtbar
+- **Drucken:** Plan als A4 Landscape drucken, mit wählbaren Optionen
+- **Tage ein-/ausblenden:** Wochentage und leere Tage können ausgeblendet werden
 
 ## Installation
 
@@ -49,6 +62,8 @@ Das Repository ist so strukturiert, dass es direkt geklont und verwendet werden 
      "startHour": "8",
      "endHour": "22",
      "bookingColors": [],
+     "hiddenDays": [],
+     "hideEmptyDays": false,
      "loginhash": 108819879
    }
    ```
@@ -62,6 +77,25 @@ Das Repository ist so strukturiert, dass es direkt geklont und verwendet werden 
 3. Admin-Passwort festlegen
 4. Fertig!
 
+## URL-Parameter
+
+Alle Parameter können beliebig kombiniert werden.
+
+| Parameter | Beschreibung | Beispiel |
+|---|---|---|
+| `embedded=true` | Versteckt alle Bedienelemente (Login, FABs, Sidebar) | `?embedded=true` |
+| `readonly=true` | Deaktiviert alle Interaktionen | `?readonly=true` |
+| `compact=true` | Kompakte Darstellung ohne Header | `?compact=true` |
+| `category=Name` | Zeigt nur Termine einer Kategorie | `?category=Jugend` |
+| `day=...` | Zeigt nur bestimmte Tage (positiver Filter) | `?day=Mo,Mi,Fr` |
+| `hide=...` | Blendet bestimmte Tage aus (negativer Filter) | `?hide=Sa,So` |
+| `hideempty=true` | Blendet Tage ohne Termine aus | `?hideempty=true` |
+
+**Flexible Tag-Eingabe:** Die Parameter `day` und `hide` akzeptieren verschiedene Formate – kommagetrennt, in beliebiger Kombination:
+- Deutsch: `Montag`, `Mo`
+- Englisch: `Monday`, `Mon`
+- Nummern: `1` (=Montag) bis `7` (=Sonntag)
+
 ## iFrame-Einbettung (Beispiele)
 
 ```html
@@ -71,17 +105,20 @@ Das Repository ist so strukturiert, dass es direkt geklont und verwendet werden 
 <!-- Nur Jugend-Termine anzeigen -->
 <iframe src="https://example.com/weekwise/?embedded=true&category=Jugend" width="100%" height="600"></iframe>
 
-<!-- Nur Montag anzeigen, kompakt -->
-<iframe src="https://example.com/weekwise/?embedded=true&day=Montag&compact=true" width="100%" height="400"></iframe>
+<!-- Nur Montag bis Freitag, kompakt -->
+<iframe src="https://example.com/weekwise/?embedded=true&hide=Sa,So&compact=true" width="100%" height="400"></iframe>
+
+<!-- Hallenbelegung (readonly, ohne leere Tage) -->
+<iframe src="https://example.com/weekwise/?embedded=true&readonly=true&hideempty=true" width="100%" height="600"></iframe>
 ```
 
 ## Anwendungsbeispiele
 
 - **Sportvereine:** Verwaltung von Trainingszeiten und Angeboten
-- **Familien:** Übersicht über Wöchentliche Termine oder digitaler Stundenplan (im Heimnetzwerk)
+- **Familien:** Übersicht über wöchentliche Termine oder digitaler Stundenplan (im Heimnetzwerk)
 - **Privatpersonen:** Planung von wöchentlichen Terminen und Aufgaben
-- **Gemeinden:** Veranstaltungskalender
-- **Unternehmen:** Ressourcenplanung (Räume, Geräte) - Info-Screens
+- **Gemeinden:** Veranstaltungskalender, Hallenbelegungspläne
+- **Unternehmen:** Ressourcenplanung (Räume, Geräte) – Info-Screens
 
 ## Technologien
 
@@ -117,8 +154,8 @@ Beiträge zur Weiterentwicklung von WeekWise sind willkommen!
 - Feedback zur Usability
 
 ## Known Bugs
-- Neu erstellte Termine können nicht direkt einer Kategorie zugeordnet werden. Erst speichern, dann bearbeitern und zuweisen.
-- Die Passwort Felder werden beim speichern (und dadurch setzten) eines neuen Passworts nicht automatisch geleert. Müssen manuell geleert werden.
+- Neu erstellte Termine können nicht direkt einer Kategorie zugeordnet werden. Erst speichern, dann bearbeiten und zuweisen.
+- Die Passwort-Felder werden beim Speichern eines neuen Passworts nicht automatisch geleert. Müssen manuell geleert werden.
 
 ## Lizenz
 
@@ -127,7 +164,7 @@ Eine formelle Open-Source-Lizenz (z.B. MIT oder GPL) wird noch hinzugefügt.
 
 ## Demo
 
-Live-Demo unter: https://dev0.sv-wolken.de/ - Zugang mit dem hier angegebenen default Passwort zum ausprobieren möglich. 
+Live-Demo unter: https://dev0.sv-wolken.de/ – Zugang mit dem hier angegebenen Default-Passwort zum Ausprobieren möglich. 
 Bitte aufgeräumt hinterlassen. 
 
 ---

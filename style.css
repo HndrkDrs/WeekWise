@@ -68,6 +68,11 @@
     mask-image: url('ico/chevron-right.svg');
 }
 
+.icon.print {
+    -webkit-mask-image: url('ico/print.svg');
+    mask-image: url('ico/print.svg');
+}
+
 /* =====================================================
    Sidebar Styles
    ===================================================== */
@@ -235,7 +240,7 @@ body.readonly .mobile-booking {
     left: 2px;
     box-sizing: border-box;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0.2s ease;
     z-index: 1;
     display: flex;
     flex-direction: column;
@@ -362,12 +367,11 @@ body.readonly .mobile-booking {
 }
 
 /* =====================================================
-   Floating Action Buttons
+   Floating Action Buttons (vertical stack, bottom-right)
    ===================================================== */
 
 .fab {
     position: fixed;
-    bottom: 30px;
     right: 30px;
     background: var(--header-color);
     color: white;
@@ -379,14 +383,111 @@ body.readonly .mobile-booking {
     justify-content: center;
     box-shadow: 0 3px 8px var(--shadow);
     cursor: pointer;
-    transition: all 0.2s ease;
-    z-index: 100;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 998;
     border: none;
 }
+
+.fab-bottom { bottom: 30px; }
+.fab-mid    { bottom: 100px; }
+.fab-top    { bottom: 170px; }
 
 .fab:hover {
     transform: scale(1.1);
     box-shadow: 0 4px 12px var(--shadow-hover);
+}
+
+/* =====================================================
+   Print Options Popup
+   ===================================================== */
+
+.print-popup {
+    position: fixed;
+    right: 30px;
+    bottom: 170px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px var(--shadow);
+    padding: 15px;
+    z-index: 999;
+    min-width: 220px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.print-popup.visible {
+    display: flex;
+}
+
+.print-popup h4 {
+    margin: 0 0 5px 0;
+    font-style: normal;
+}
+
+.print-popup label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.print-popup select {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.print-popup button {
+    margin-top: 5px;
+}
+
+/* =====================================================
+   Day Checkboxes (Settings)
+   ===================================================== */
+
+.day-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 12px;
+}
+
+.day-checkboxes label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.9em;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* =====================================================
+   Hidden Day Styles
+   ===================================================== */
+
+.weekday-hidden {
+    opacity: 0.4;
+}
+
+.day-column-hidden {
+    opacity: 0.3;
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(0, 0, 0, 0.03) 10px,
+        rgba(0, 0, 0, 0.03) 20px
+    );
+}
+
+.day-tile-hidden {
+    opacity: 0.4;
+}
+
+.day-tile-hidden .day-name {
+    text-decoration: line-through;
 }
 
 /* =====================================================
@@ -455,6 +556,25 @@ button {
 
 button:hover {
     opacity: 0.9;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.fab:focus-visible {
+    outline: 2px solid var(--text-dark);
+    outline-offset: 2px;
+}
+
+.booking:focus-visible,
+.mobile-booking:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
 }
 
 .cancel-button {
@@ -814,9 +934,19 @@ button:hover {
         bottom: 20px;
     }
     
+    #printButton {
+        right: 20px;
+        bottom: 85px;
+    }
+    
     #newBookingButton {
-        right: 90px;
-        bottom: 20px;
+        right: 20px;
+        bottom: 150px;
+    }
+    
+    .print-popup {
+        right: 20px;
+        bottom: 220px;
     }
     
     .modal-content {
@@ -887,18 +1017,83 @@ button:hover {
    ===================================================== */
 
 @media print {
+    @page {
+        size: A4 landscape;
+        margin: 10mm;
+    }
+    
     body {
         padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     
     .fab,
     .sidebar-container,
     .booking-actions,
-    .mobile-booking-actions {
+    .mobile-booking-actions,
+    .print-popup,
+    .modal {
         display: none !important;
+    }
+    
+    /* Always show desktop grid when printing */
+    .day-tiles {
+        display: none !important;
+    }
+    
+    .weekdays,
+    .day-columns {
+        display: grid !important;
     }
     
     .calendar {
         box-shadow: none;
+        margin-right: 0 !important;
+        overflow: visible;
+    }
+    
+    .day-column {
+        overflow: visible;
+    }
+    
+    /* Hide greyed-out columns in print */
+    .day-column-hidden,
+    .weekday-hidden {
+        display: none !important;
+    }
+    
+    /* Print option: no header */
+    body.print-no-header .calendar-header {
+        display: none !important;
+    }
+    
+    /* Print option: no colors */
+    body.print-no-colors .booking {
+        background: white !important;
+        border: 1px solid #333 !important;
+    }
+    
+    body.print-no-colors .booking-title,
+    body.print-no-colors .booking-time {
+        color: #333 !important;
+    }
+    
+    body.print-no-colors .calendar-header {
+        background: #333 !important;
+    }
+    
+    /* Print option: category filter */
+    .booking.print-hidden {
+        display: none !important;
+    }
+    
+    /* Booking text legibility */
+    .booking-title {
+        font-size: 0.75em;
+    }
+    
+    .booking-time {
+        font-size: 0.65em;
     }
 }
