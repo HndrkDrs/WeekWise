@@ -619,24 +619,27 @@ function buildDaySelect() {
 }
 
 /**
- * Build hidden-day checkboxes in settings (week mode only).
+ * Build hidden-day checkboxes in settings.
+ * Always renders 7 checkboxes (week mode) regardless of current state.mode,
+ * because this is only relevant for week mode display.
  */
 function buildHiddenDaysCheckboxes() {
     const container = document.getElementById('hiddenDaysCheckboxes');
     if (!container) return;
     
     container.innerHTML = '';
-    const count = getDayCount();
+    const count = 7; // Always 7 weekday checkboxes
     const hiddenDays = JSON.parse(localStorage.getItem('hiddenDays') || '[]');
     
     for (let i = 1; i <= count; i++) {
         const label = document.createElement('label');
+        label.className = 'day-chip';
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.value = i;
         cb.checked = !hiddenDays.includes(i);
         label.appendChild(cb);
-        label.appendChild(document.createTextNode(' ' + getDayShortLabel(i)));
+        label.appendChild(document.createTextNode(getDayShortLabel(i)));
         container.appendChild(label);
     }
 }
@@ -1452,12 +1455,18 @@ async function updateCategorySelect() {
 // =====================================================
 
 async function exportBookings() {
+    const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
     const cleanBookings = state.bookings.map(booking => {
         const clean = {};
         for (const [key, value] of Object.entries(booking)) {
             if (value !== undefined && value !== '') {
                 clean[key] = value;
             }
+        }
+        // Embed categoryName for portable import
+        if (clean.categoryID && clean.categoryID !== 'default') {
+            const cat = bookingColors.find(c => c.id === clean.categoryID);
+            if (cat) clean.categoryName = cat.name;
         }
         return clean;
     });
@@ -1492,80 +1501,169 @@ function importBookings() {
                 return;
             }
             
-            // Detect missing categories
+            // Migrate imported bookings from string days to numeric
+            validBookings.forEach(b => {
+                if (typeof b.day === 'string') {
+                    const numDay = migrateDay(b.day);
+                    if (numDay !== null) b.day = numDay;
+                }
+            });
+            
+            // Detect missing categories — match by ID first, then fall back to categoryName
             const localColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
             const localIds = new Set(localColors.map(c => c.id));
-            const missingCategories = new Map();
+            const localNames = new Map(localColors.map(c => [c.name.toLowerCase(), c]));
+            const missingCategories = new Map(); // id → { count, name }
+            
             validBookings.forEach(b => {
-                if (b.categoryID && !localIds.has(b.categoryID)) {
-                    missingCategories.set(b.categoryID, (missingCategories.get(b.categoryID) || 0) + 1);
+                if (b.categoryID && b.categoryID !== 'default' && !localIds.has(b.categoryID)) {
+                    // Try to match by name if available
+                    const importName = b.categoryName || b.categoryID;
+                    const localMatch = localNames.get(importName.toLowerCase());
+                    if (localMatch) {
+                        // Remap to local category ID
+                        b.categoryID = localMatch.id;
+                    } else {
+                        if (!missingCategories.has(b.categoryID)) {
+                            missingCategories.set(b.categoryID, { count: 0, name: importName });
+                        }
+                        missingCategories.get(b.categoryID).count++;
+                    }
                 }
             });
             
             if (missingCategories.size > 0) {
                 const missingList = Array.from(missingCategories.entries())
-                    .map(([id, count]) => `  • "${id}" (${count} Termine)`)
+                    .map(([id, info]) => `  • "${info.name}" (${info.count} Termine)`)
                     .join('\n');
                 
-                const choice = prompt(
-                    `Folgende Kategorien existieren lokal nicht:\n${missingList}\n\n` +
-                    `Optionen:\n` +
-                    `1 = Kategorien automatisch anlegen (Standardfarbe)\n` +
-                    `2 = Kategorien aus Terminen entfernen\n` +
-                    `3 = Import abbrechen\n\nBitte 1, 2 oder 3 eingeben:`,
-                    '1'
-                );
+                const choice = await showImportCategoryDialog(missingList);
                 
-                if (choice === '3' || choice === null) return;
+                if (choice === 'cancel') return;
                 
-                if (choice === '1') {
+                if (choice === 'create') {
                     // Auto-create missing categories with default color
                     const defaultColor = getComputedStyle(document.documentElement)
                         .getPropertyValue('--secondary').trim() || '#6c757d';
-                    missingCategories.forEach((_, id) => {
-                        localColors.push({ id, name: id, color: defaultColor });
+                    missingCategories.forEach((info, id) => {
+                        localColors.push({ id, name: info.name, color: defaultColor });
                     });
                     localStorage.setItem('bookingColors', JSON.stringify(localColors));
-                } else if (choice === '2') {
+                } else if (choice === 'remove') {
                     // Strip categoryID from bookings with missing categories
                     validBookings.forEach(b => {
                         if (b.categoryID && missingCategories.has(b.categoryID)) {
                             delete b.categoryID;
+                            delete b.categoryName;
                         }
                     });
                 }
             }
             
-            if (confirm('Möchten Sie die bestehenden Termine überschreiben oder ergänzen?\nOK = Überschreiben, Abbrechen = Ergänzen')) {
+            // Ask overwrite or append with custom dialog
+            const importMode = await showImportModeDialog(validBookings.length);
+            if (importMode === 'cancel') return;
+            
+            if (importMode === 'overwrite') {
                 state.bookings.length = 0;
             }
             state.bookings.push(...validBookings);
             
             await saveToServer('bookings.json', state.bookings);
             
-            // If categories were created, save settings too
+            // If categories were created, save full settings
             if (missingCategories.size > 0) {
-                const configData = {
-                    primary: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(),
-                    secondary: getComputedStyle(document.documentElement).getPropertyValue('--secondary').trim(),
-                    bookingColors: JSON.parse(localStorage.getItem('bookingColors') || '[]'),
-                    startHour: parseInt(localStorage.getItem('startHour') || CONFIG.DEFAULT_START_HOUR),
-                    endHour: parseInt(localStorage.getItem('endHour') || CONFIG.DEFAULT_END_HOUR),
-                    hiddenDays: JSON.parse(localStorage.getItem('hiddenDays') || '[]'),
-                    hideEmptyDays: localStorage.getItem('hideEmptyDays') === 'true'
-                };
-                const hash = localStorage.getItem('loginhash');
-                if (hash) configData.hash = Number(hash);
+                const configData = buildFullConfigData();
                 await saveToServer('settings.json', configData);
             }
             
-            renderBookings();
+            buildMobileTiles();
+            createDayColumns();
+            
+            alert(`Import abgeschlossen: ${validBookings.length} Termine ${importMode === 'overwrite' ? 'importiert' : 'hinzugefügt'}.`);
         } catch (error) {
             alert('Fehler: Ungültiges Dateiformat. Bitte eine gültige JSON-Datei verwenden.');
             console.error('Import error:', error);
         }
     };
     reader.readAsText(file);
+    // Reset file input so same file can be imported again
+    document.getElementById('importFile').value = '';
+}
+
+/**
+ * Show a custom dialog for missing category handling during import.
+ * Returns: 'create' | 'remove' | 'cancel'
+ */
+function showImportCategoryDialog(missingList) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width:460px">
+                <h3>Fehlende Kategorien</h3>
+                <p style="white-space:pre-line;font-size:0.9em;margin-bottom:15px">Folgende Kategorien existieren lokal nicht:\n${escapeHtml(missingList)}</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <button type="button" class="import-dialog-btn" data-choice="create">Kategorien anlegen</button>
+                    <button type="button" class="import-dialog-btn cancel-button" data-choice="remove">Kategorien entfernen</button>
+                    <button type="button" class="import-dialog-btn cancel-button" data-choice="cancel">Abbrechen</button>
+                </div>
+            </div>`;
+        overlay.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-choice]');
+            if (btn) { overlay.remove(); resolve(btn.dataset.choice); }
+        });
+        document.body.appendChild(overlay);
+    });
+}
+
+/**
+ * Show a custom dialog for import mode: overwrite or append.
+ * Returns: 'overwrite' | 'append' | 'cancel'
+ */
+function showImportModeDialog(count) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width:420px">
+                <h3>Import: ${count} Termine</h3>
+                <p style="font-size:0.9em;margin-bottom:15px">Sollen die bestehenden Termine überschrieben oder die neuen Termine ergänzt werden?</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <button type="button" class="import-dialog-btn danger-button" data-choice="overwrite">Überschreiben</button>
+                    <button type="button" class="import-dialog-btn" data-choice="append">Ergänzen</button>
+                    <button type="button" class="import-dialog-btn cancel-button" data-choice="cancel">Abbrechen</button>
+                </div>
+            </div>`;
+        overlay.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-choice]');
+            if (btn) { overlay.remove(); resolve(btn.dataset.choice); }
+        });
+        document.body.appendChild(overlay);
+    });
+}
+
+/**
+ * Build a complete settings config object from current state + localStorage.
+ * Used when saving settings and when import creates new categories.
+ */
+function buildFullConfigData() {
+    return {
+        title: document.querySelector('.calendar-header h2')?.textContent || 'Wochenplan',
+        headerColor: getComputedStyle(document.documentElement).getPropertyValue('--header-color').trim(),
+        secondaryColor: getComputedStyle(document.documentElement).getPropertyValue('--secondary').trim(),
+        startHour: localStorage.getItem('startHour') || CONFIG.DEFAULT_START_HOUR,
+        endHour: localStorage.getItem('endHour') || CONFIG.DEFAULT_END_HOUR,
+        bookingColors: JSON.parse(localStorage.getItem('bookingColors') || '[]'),
+        hiddenDays: JSON.parse(localStorage.getItem('hiddenDays') || '[]'),
+        hideEmptyDays: localStorage.getItem('hideEmptyDays') === 'true',
+        loginhash: Number(localStorage.getItem('loginhash')) || CONFIG.DEFAULT_HASH,
+        mode: state.mode,
+        eventStartDate: state.eventStartDate,
+        eventDayCount: state.eventDayCount
+    };
 }
 
 function validateBooking(booking) {
@@ -1739,7 +1837,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const categoryID = document.getElementById('bookingCategory').value;
         const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
-        const selectedColor = bookingColors.find(c => c.id === categoryID)?.color || 'var(--secondary)';
+        const selectedCat = bookingColors.find(c => c.id === categoryID);
+        const selectedColor = selectedCat?.color || 'var(--secondary)';
         
         const newBooking = {
             day: parseInt(document.getElementById('bookingDay').value),
@@ -1751,6 +1850,7 @@ document.addEventListener('DOMContentLoaded', () => {
             contact: document.getElementById('bookingContact').value.trim(),
             link: document.getElementById('bookingLink').value.trim(),
             categoryID: categoryID,
+            categoryName: selectedCat?.name || '',
             description: document.getElementById('bookingDescription').value.trim(),
             color: selectedColor
         };

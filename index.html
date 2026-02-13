@@ -185,7 +185,7 @@
             </div>
 
             <div class="form-group">
-                <label><input type="checkbox" id="hideEmptyDays"> Leere Tage ausblenden</label>
+                <label class="inline-check"><input type="checkbox" id="hideEmptyDays"> Leere Tage ausblenden</label>
             </div>
 
             <!-- ── Darstellung ── -->
@@ -223,10 +223,10 @@
             <div class="form-group">
                 <label>Passwort ändern</label>
                 <input type="password" id="oldpwd" placeholder="Altes Passwort" autocomplete="current-password">
-                <input type="password" id="newpwd" placeholder="Neues Passwort" autocomplete="new-password" style="margin-top: 5px;">
+                <input type="password" id="newpwd" placeholder="Neues Passwort" autocomplete="new-password" style="margin-top: 4px;">
             </div>
 
-            <div class="form-group" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color);">
                 <button type="button" onclick="saveSettings()">Speichern</button>
                 <button type="button" onclick="logout()" class="danger-button">Ausloggen</button>
                 <button type="button" class="cancel-button" onclick="closeOptionsModal()">Abbrechen</button>
