@@ -456,22 +456,50 @@ body.readonly .mobile-booking {
 }
 
 /* =====================================================
-   Day Checkboxes (Settings)
+   Day Checkboxes (Settings) – Chip Style
    ===================================================== */
 
 .day-checkboxes {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px 12px;
+    gap: 6px;
 }
 
-.day-checkboxes label {
-    display: flex;
+.day-checkboxes .day-chip {
+    display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.9em;
+    font-size: 0.85em;
     cursor: pointer;
     user-select: none;
+    background: var(--bg-light);
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.day-checkboxes .day-chip:hover {
+    border-color: var(--primary);
+}
+
+.day-checkboxes .day-chip input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+/* Inline checkbox label (for hideEmptyDays etc.) */
+.form-group .inline-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.form-group .inline-check input[type="checkbox"] {
+    width: auto;
+    margin: 0;
 }
 
 /* =====================================================
@@ -536,16 +564,26 @@ body.readonly .mobile-booking {
     max-width: 520px;
 }
 
+/* Settings: tighter form spacing */
+#optionsModal .form-group {
+    margin-bottom: 12px;
+}
+
+#optionsModal .form-group label {
+    margin-bottom: 4px;
+    font-size: 0.9em;
+}
+
 /* Settings Section Dividers */
 .settings-section-divider {
-    font-size: 0.75em;
+    font-size: 0.7em;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     color: var(--text-light);
     border-bottom: 1px dashed var(--border-color);
     padding-bottom: 4px;
-    margin: 20px 0 12px;
+    margin: 18px 0 10px;
 }
 
 /* Mode Toggle */
