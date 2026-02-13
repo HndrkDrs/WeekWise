@@ -68,13 +68,30 @@
         <div class="day-columns" id="dayColumns"></div>
     </div>
 
-    <!-- Floating Action Buttons -->
-    <button class="fab" id="newBookingButton" style="display:none" aria-label="Neuer Termin">
+    <!-- Floating Action Buttons (vertical stack, bottom-right) -->
+    <button class="fab fab-top" id="newBookingButton" style="display:none" aria-label="Neuer Termin">
         <span class="icon add"></span>
     </button>
-    <button class="fab" id="editButton" aria-label="Bearbeiten">
+    <button class="fab fab-mid" id="printButton" style="display:none" aria-label="Drucken">
+        <span class="icon print"></span>
+    </button>
+    <button class="fab fab-bottom" id="editButton" aria-label="Bearbeiten">
         <span class="icon edit"></span>
     </button>
+
+    <!-- Print Options Popup -->
+    <div class="print-popup" id="printPopup">
+        <h4>Druckoptionen</h4>
+        <label><input type="checkbox" id="printWithHeader" checked> Mit Kopfzeile</label>
+        <label><input type="checkbox" id="printWithColors" checked> Mit Farben</label>
+        <div class="form-group" style="margin-bottom:0">
+            <label for="printCategory">Kategorie</label>
+            <select id="printCategory">
+                <option value="">Alle</option>
+            </select>
+        </div>
+        <button type="button" onclick="executePrint()">Drucken</button>
+    </div>
 
     <!-- Login Modal -->
     <div class="modal" id="loginModal">
@@ -184,6 +201,21 @@
                     <span>bis</span>
                     <select id="endHour"></select>
                 </div>
+            </div>
+            <div class="form-group">
+                <label>Tage anzeigen</label>
+                <div id="hiddenDaysCheckboxes" class="day-checkboxes">
+                    <label><input type="checkbox" value="Montag" checked> Mo</label>
+                    <label><input type="checkbox" value="Dienstag" checked> Di</label>
+                    <label><input type="checkbox" value="Mittwoch" checked> Mi</label>
+                    <label><input type="checkbox" value="Donnerstag" checked> Do</label>
+                    <label><input type="checkbox" value="Freitag" checked> Fr</label>
+                    <label><input type="checkbox" value="Samstag" checked> Sa</label>
+                    <label><input type="checkbox" value="Sonntag" checked> So</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="hideEmptyDays"> Leere Tage ausblenden</label>
             </div>
             <div class="form-group">
                 <label>Export/Import</label>
