@@ -153,9 +153,16 @@ Beiträge zur Weiterentwicklung von WeekWise sind willkommen!
 - Pull Requests für Verbesserungen
 - Feedback zur Usability
 
-## Known Bugs
+## Known Bugs & ToDo
 - Neu erstellte Termine können nicht direkt einer Kategorie zugeordnet werden. Erst speichern, dann bearbeiten und zuweisen.
 - Die Passwort-Felder werden beim Speichern eines neuen Passworts nicht automatisch geleert. Müssen manuell geleert werden.
+- Version 2.2 (Event-Modus) noch nicht im Changelog
+- Eigener Changelog erstellen um Readme zu entlasten
+- Im Eventmodus scrollen die Daten über den Spalten beim horizontalten scrollen nicht mit (>10 Einträge) sondern kann separat gescrollt werden. Sollte in sync sein. 
+- Beim Drucken funktioniert das skalieren auf Seitenbreite - das automatische skalieren auf Seitenhöhe funktioniert nicht. 
+- Roadmap ist noch ein WIP Dokument der Version 2.0 --> überarbeiten zu echter Roadmap 
+- Ics download und abo im event-Modus ist noch nicht dokumentiert
+- Lizenz hinzufügen
 
 ## Lizenz
 
