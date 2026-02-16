@@ -117,6 +117,7 @@ function parseDayList(input) {
 /**
  * Migrate a booking's day field from old string format to numeric.
  * Returns the numeric day, or null if unmappable.
+ * Changed in 2.1., needed for backwards compatibility, deprecated in 3.0
  */
 function migrateDay(dayValue) {
     if (typeof dayValue === 'number') return dayValue;
@@ -139,6 +140,7 @@ function migrateDay(dayValue) {
 /**
  * Migrate hiddenDays from old string format to numeric.
  * ["Samstag", "Sonntag"] → [6, 7]
+ * Changed in 2.1., needed for backwards compatibility, deprecated in 3.0
  */
 function migrateHiddenDays(hiddenDays) {
     if (!Array.isArray(hiddenDays)) return [];

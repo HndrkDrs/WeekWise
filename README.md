@@ -161,7 +161,7 @@ Beiträge zur Weiterentwicklung von WeekWise sind willkommen!
 - Im Eventmodus scrollen die Daten über den Spalten beim horizontalten scrollen nicht mit (>10 Einträge) sondern kann separat gescrollt werden. Sollte in sync sein. 
 - Beim Drucken funktioniert das skalieren auf Seitenbreite - das automatische skalieren auf Seitenhöhe funktioniert nicht. 
 - Roadmap ist noch ein WIP Dokument der Version 2.0 --> überarbeiten zu echter Roadmap 
-- Ics download und abo im event-Modus ist noch nicht dokumentiert
+- Ics download und abo im event-Modus ist noch nicht entwickelt und dokumentiert. - Schnittstelle für admin und Enduser nötig oder nur doku?
 - Lizenz hinzufügen
 
 ## Lizenz
