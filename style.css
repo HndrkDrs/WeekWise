@@ -302,6 +302,46 @@ body.readonly .mobile-booking {
     box-shadow: 0 5px 15px var(--shadow-hover);
 }
 
+/* Multi-selection highlight */
+.booking.selected,
+.mobile-booking.selected {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.25);
+    z-index: 15;
+}
+
+/* Drag & Drop */
+.booking.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+}
+
+.day-column.drag-over {
+    background: rgba(33, 150, 243, 0.08);
+    outline: 2px dashed var(--primary);
+    outline-offset: -2px;
+}
+
+#Ablage.drag-over {
+    background: rgba(33, 150, 243, 0.08);
+    outline: 2px dashed var(--primary);
+    outline-offset: -2px;
+}
+
+.drag-ghost {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    background: var(--primary);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
 .booking-title {
     font-weight: bold;
     margin: 0;
@@ -359,6 +399,10 @@ body.readonly .mobile-booking {
 
 .delete-button {
     background: var(--danger);
+}
+
+.duplicate-button {
+    background: #607D8B;
 }
 
 /* =====================================================

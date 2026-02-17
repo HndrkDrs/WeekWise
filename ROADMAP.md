@@ -75,16 +75,18 @@ Termine, die sich zeitlich überlappen, werden übereinander dargestellt und ver
 ## 5. Usability-Verbesserungen
 
 ### Benutzerfreundlichkeit:
-- [ ] **Drag & Drop** zum Verschieben von Terminen (optional, Desktop)
+- [x] **Drag & Drop** zum Verschieben von Terminen (Desktop, + Shift zum Duplizieren)
 - [ ] **Tooltip** beim Hover über Termine
 - [ ] **Bessere Farbkontraste**: Automatische Textfarbe basierend auf Hintergrund
 - [ ] **Bestätigungsdialoge** konsistent gestalten
 - [ ] **Ladeindikator** bei Speichern/Laden
 
 ### Editor-Verbesserungen:
+- [x] **DEL-Taste** zum Löschen von ausgewählten Terminen
+- [x] **Multi-Select** mit Strg+Klick + DEL für Massenlöschen
 - [ ] **Keyboard Navigation** im Formular
 - [ ] **Auto-Complete** für Trainer-Namen
-- [ ] **Schnelles Duplizieren** von Terminen
+- [x] **Schnelles Duplizieren** von Terminen (Button im Modal + Shift+Drag)
 
 ---
 
