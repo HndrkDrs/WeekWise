@@ -791,13 +791,31 @@ function createDayColumns() {
         container.classList.toggle('event-scroll', needsScroll);
         if (scrollWrapper) {
             scrollWrapper.classList.toggle('event-scroll', needsScroll);
-            scrollWrapper.classList.remove('scrolled-end');
+            
+            // Ensure wrapper container + scroll hint exist
+            let wrapperContainer = scrollWrapper.parentElement;
+            if (!wrapperContainer.classList.contains('scroll-wrapper-container')) {
+                const newContainer = document.createElement('div');
+                newContainer.className = 'scroll-wrapper-container';
+                wrapperContainer.insertBefore(newContainer, scrollWrapper);
+                newContainer.appendChild(scrollWrapper);
+                wrapperContainer = newContainer;
+            }
+            let scrollHint = wrapperContainer.querySelector('.scroll-hint');
+            if (!scrollHint) {
+                scrollHint = document.createElement('div');
+                scrollHint.className = 'scroll-hint';
+                wrapperContainer.appendChild(scrollHint);
+            }
+            
             if (needsScroll) {
+                scrollHint.classList.add('visible');
                 scrollWrapper.onscroll = () => {
                     const atEnd = scrollWrapper.scrollLeft + scrollWrapper.clientWidth >= scrollWrapper.scrollWidth - 5;
-                    scrollWrapper.classList.toggle('scrolled-end', atEnd);
+                    scrollHint.classList.toggle('visible', !atEnd);
                 };
             } else {
+                scrollHint.classList.remove('visible');
                 scrollWrapper.onscroll = null;
             }
         }

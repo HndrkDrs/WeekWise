@@ -210,18 +210,21 @@ body.readonly .mobile-booking {
     text-align: center;
 }
 
+/* Scroll wrapper + hint container */
+.scroll-wrapper-container {
+    position: relative;
+}
+
 .desktop-scroll-wrapper {
     overflow-x: visible;
-    position: relative;
 }
 
 .desktop-scroll-wrapper.event-scroll {
     overflow-x: auto;
 }
 
-/* Scroll hint: fade gradient on right edge */
-.desktop-scroll-wrapper.event-scroll::after {
-    content: '→';
+/* Scroll hint: sticky gradient overlay on right edge */
+.scroll-hint {
     position: absolute;
     top: 0;
     right: 0;
@@ -237,10 +240,15 @@ body.readonly .mobile-booking {
     font-size: 1.2em;
     color: var(--text-light);
     transition: opacity 0.3s;
+    opacity: 0;
 }
 
-.desktop-scroll-wrapper.event-scroll.scrolled-end::after {
-    opacity: 0;
+.scroll-hint.visible {
+    opacity: 1;
+}
+
+.scroll-hint::after {
+    content: '→';
 }
 
 .weekdays {
@@ -1522,6 +1530,10 @@ textarea:focus-visible {
 
     .desktop-scroll-wrapper {
         overflow: visible !important;
+    }
+    
+    .scroll-hint {
+        display: none !important;
     }
     
     .calendar {
