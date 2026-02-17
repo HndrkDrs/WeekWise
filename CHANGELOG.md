@@ -17,6 +17,10 @@ Alle wichtigen Änderungen an WeekWise werden in dieser Datei dokumentiert.
 - **Persistente Booking-IDs** – Jedes Booking erhält eine eindeutige UUID. Stabile Identifikation über Bearbeitungen, Verschiebungen und ICS-Exporte hinweg. Migration bestehender Bookings geschieht automatisch.
 - **Drag & Drop auf andere Uhrzeit** – Termine können per Drag & Drop nicht nur zwischen Tagen, sondern auch auf eine andere Uhrzeit verschoben werden (15-Min-Raster).
 - **Resize-Handle** – Am unteren Rand eines Termins kann die Dauer durch Ziehen angepasst werden (15-Min-Schritte).
+- **FAB-Flex-Stack** – Floating Action Buttons nutzen jetzt einen Flex-Container und rücken automatisch zusammen, wenn einzelne Buttons ausgeblendet sind.
+- **Auto-Token bei Event-Aktivierung** – Beim erstmaligen Aktivieren des Event-Modus wird automatisch ein ICS-Token generiert.
+- **Startdatum-Änderungsdialog** – Beim Ändern des Event-Startdatums erscheint ein Dialog mit 3 Optionen: Termine relativ beibehalten, auf neue Daten verschieben oder alle in Ablage. Danach wird ein neuer Token angeboten.
+- **Optionale Tagesauswahl im ICS-Dialog** – Neue Admin-Einstellung steuert, ob Nutzer im ICS-Export-Dialog einzelne Tage filtern können (sinnvoll ab vielen Tagen abschaltbar).
 
 ### Technisch
 - Neuer Server-Endpoint `ical.php` für ICS-Generierung (RFC 5545).
@@ -29,6 +33,9 @@ Alle wichtigen Änderungen an WeekWise werden in dieser Datei dokumentiert.
 - Beim Import aus Fremdsystemen werden IDs immer neu generiert (keine ID-Kollisionen).
 - Beim Duplizieren/Kopieren wird eine neue ID vergeben.
 - `snapTo15()` Hilfsfunktion für 15-Minuten-Raster bei Drag & Resize.
+- FABs in `.fab-stack` Flex-Container statt feste `bottom`-Positionen. Löst Überlappungsproblem bei konditionaler Sichtbarkeit.
+- Settings erweitert um `icsDayFilter` (Boolean) – steuert ob Tages-Chips im ICS-Modal angezeigt werden.
+- `showStartDateChangeDialog()` – Custom-Modal mit 4 Optionen für Termin-Migration bei Datumsänderung.
 - Installer auf Version 2.3 aktualisiert, inkl. `ical.php`, `calendar.svg` und neuer Settings-Felder.
 
 ---

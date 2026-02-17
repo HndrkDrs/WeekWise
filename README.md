@@ -7,7 +7,7 @@ WeekWise ist ein benutzerfreundliches Tool zur Erstellung und Verwaltung von Woc
 ### Neue Features
 - **ICS-Kalender-Export** – Termine als ICS-Datei herunterladen oder als Abo-URL (webcal://) in Kalender-Apps abonnieren.
 - **Token-basiertes Abo** – Im Event-Modus werden Abo-Links über generierbare Tokens gesteuert. Token-Verlauf in settings.json.
-- **Öffentlicher ICS-Zugang** – Export kann für nicht eingeloggte Nutzer freigeschaltet werden.
+- **Öffentlicher ICS-Zugang** – Export-Dialog kann für nicht eingeloggte Nutzer freigeschaltet werden.
 - **Filter im Export** – Kategorie- und Tages-Chips zum selektiven Export.
 - **Embedded ICS-Modal** – `?embedded=true&view=ics` zeigt nur den Export-Dialog.
 - **Persistente Booking-IDs** – Jedes Booking erhält eine UUID für stabile Identifikation (ICS, Sync).
@@ -40,7 +40,7 @@ WeekWise ist ein benutzerfreundliches Tool zur Erstellung und Verwaltung von Woc
 - **Mobile Ansicht:** Für Mobilgeräte optimierte Darstellung
 - **Ablage:** Termine können "geparkt" werden und sind nur für Admins sichtbar
 - **Drucken:** Plan als A4 Landscape drucken, mit wählbaren Optionen
-- **Tage ein-/ausblenden:** Wochentage und leere Tage können ausgeblendet werden
+- **Tage ein-/ausblenden:** Bestimmte Tage können ausgeblendet werden. Leere Tage können automatisch ausgeblendet werden
 - **Kalender-Export:** ICS-Download und Abo-URLs (webcal://) für Kalender-Integration
 
 ## Installation
@@ -65,7 +65,8 @@ Das Repository ist so strukturiert, dass es direkt geklont und verwendet werden 
      "eventStartDate": null,
      "eventDayCount": 3,
      "icsTokens": [],
-     "icsPublic": false
+     "icsPublic": false,
+     "icsDayFilter": false
    }
    ```
 3. Fertig! Das Standard-Passwort ist `123ChangeMe!` - bitte nach dem ersten Login ändern.
@@ -94,9 +95,10 @@ Alle Parameter können beliebig kombiniert werden.
 | `view=ics` | Zeigt nur den ICS-Export-Dialog (mit `embedded=true`) | `?embedded=true&view=ics` |
 
 **Flexible Tag-Eingabe:** Die Parameter `day` und `hide` akzeptieren verschiedene Formate – kommagetrennt, in beliebiger Kombination:
+- Nummern: `1` (=Montag) bis `7` (=Sonntag)
+im Wochenmodus zuätzlich:
 - Deutsch: `Montag`, `Mo`
 - Englisch: `Monday`, `Mon`
-- Nummern: `1` (=Montag) bis `7` (=Sonntag)
 
 ## iFrame-Einbettung (Beispiele)
 
@@ -159,6 +161,7 @@ Beiträge zur Weiterentwicklung von WeekWise sind willkommen!
 
 ## Known Bugs & ToDo
 - Beim Drucken funktioniert das Skalieren auf Seitenbreite – das automatische Skalieren auf Seitenhöhe funktioniert nicht.
+
 
 ## Lizenz
 

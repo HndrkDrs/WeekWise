@@ -44,6 +44,10 @@
 - ✅ Persistente Booking-IDs (UUID, automatische Migration)
 - ✅ Drag & Drop auf andere Uhrzeit (15-Min-Raster)
 - ✅ Resize-Handle am unteren Rand (Dauer ändern, 15-Min-Schritte)
+- ✅ FAB-Flex-Stack (Buttons rücken automatisch zusammen)
+- ✅ Auto-Token bei Event-Modus-Aktivierung
+- ✅ Startdatum-Änderungsdialog (Termine migrieren)
+- ✅ Optionale Tagesauswahl im ICS-Dialog
 - ✅ Installer auf Version 2.3 aktualisiert
 
 ---

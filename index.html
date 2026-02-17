@@ -29,19 +29,21 @@
         </div>
     </div>
 
-    <!-- Floating Action Buttons (vertical stack, bottom-right) -->
-    <button class="fab fab-extra" id="newBookingButton" style="display:none" aria-label="Neuer Termin">
-        <span class="icon add"></span>
-    </button>
-    <button class="fab fab-top" id="icsButton" style="display:none" aria-label="Kalender-Export">
-        <span class="icon calendar"></span>
-    </button>
-    <button class="fab fab-mid" id="printButton" style="display:none" aria-label="Drucken">
-        <span class="icon print"></span>
-    </button>
-    <button class="fab fab-bottom" id="editButton" aria-label="Bearbeiten">
-        <span class="icon edit"></span>
-    </button>
+    <!-- Floating Action Buttons (vertical flex stack, bottom-right) -->
+    <div class="fab-stack" id="fabStack">
+        <button class="fab" id="newBookingButton" style="display:none" aria-label="Neuer Termin">
+            <span class="icon add"></span>
+        </button>
+        <button class="fab" id="icsButton" style="display:none" aria-label="Kalender-Export">
+            <span class="icon calendar"></span>
+        </button>
+        <button class="fab" id="printButton" style="display:none" aria-label="Drucken">
+            <span class="icon print"></span>
+        </button>
+        <button class="fab" id="editButton" aria-label="Bearbeiten">
+            <span class="icon edit"></span>
+        </button>
+    </div>
 
     <!-- Print Options Popup -->
     <div class="print-popup" id="printPopup">
@@ -220,6 +222,7 @@
             <div class="form-group" id="icsSettingsSection">
                 <label>Kalender-Export (ICS)</label>
                 <label class="inline-check"><input type="checkbox" id="icsPublicCheckbox"> Öffentlich zugänglich (ohne Login)</label>
+                <label class="inline-check" style="margin-top: 4px;"><input type="checkbox" id="icsDayFilterCheckbox"> Nutzer kann bestimmte Tage auswählen</label>
                 <div style="margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                     <button type="button" id="icsGenerateTokenBtn" onclick="generateIcsToken()">Neuen Token generieren</button>
                     <span id="icsTokenDisplay" class="ics-token-info"></span>
@@ -262,7 +265,7 @@
                 <div id="icsCategoryChips" class="ics-filter-chips"></div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="icsDaySection">
                 <label>Tage</label>
                 <div id="icsDayChips" class="ics-filter-chips"></div>
             </div>

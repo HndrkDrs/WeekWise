@@ -143,7 +143,8 @@ $settings = [
     'eventStartDate' => null,
     'eventDayCount' => 3,
     'icsTokens' => [],
-    'icsPublic' => false
+    'icsPublic' => false,
+    'icsDayFilter' => false
 ];
 
 // Save settings

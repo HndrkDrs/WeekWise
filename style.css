@@ -169,7 +169,7 @@ body.embedded .calendar {
     border-radius: 0;
 }
 
-body.embedded .fab {
+body.embedded .fab-stack {
     display: none !important;
 }
 
@@ -458,12 +458,20 @@ body.readonly .mobile-booking {
 }
 
 /* =====================================================
-   Floating Action Buttons (vertical stack, bottom-right)
+   Floating Action Buttons (vertical flex stack, bottom-right)
    ===================================================== */
 
-.fab {
+.fab-stack {
     position: fixed;
     right: 30px;
+    bottom: 30px;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 14px;
+    z-index: 998;
+}
+
+.fab {
     background: var(--header-color);
     color: white;
     width: 56px;
@@ -475,14 +483,8 @@ body.readonly .mobile-booking {
     box-shadow: 0 3px 8px var(--shadow);
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    z-index: 998;
     border: none;
 }
-
-.fab-bottom { bottom: 30px; }
-.fab-mid    { bottom: 100px; }
-.fab-top    { bottom: 170px; }
-.fab-extra  { bottom: 240px; }
 
 .fab:hover {
     transform: scale(1.1);
@@ -496,7 +498,7 @@ body.readonly .mobile-booking {
 .print-popup {
     position: fixed;
     right: 30px;
-    bottom: 240px;
+    bottom: 100px;
     background: white;
     border-radius: 8px;
     box-shadow: 0 4px 20px var(--shadow);
@@ -1194,33 +1196,14 @@ textarea:focus-visible {
         margin-right: 0 !important;
     }
     
-    .fab {
-        display: flex;
-    }
-    
-    #editButton {
+    .fab-stack {
         right: 20px;
         bottom: 20px;
+        gap: 10px;
     }
     
-    #printButton {
-        right: 20px;
-        bottom: 85px;
-    }
-    
-    #newBookingButton {
-        right: 20px;
-        bottom: 150px;
-    }
-
-    #icsButton {
-        right: 20px;
-        bottom: 215px;
-    }
-    
-    .print-popup {
-        right: 20px;
-        bottom: 285px;
+    .fab {
+        display: flex;
     }
     
     .modal-content {
@@ -1259,6 +1242,10 @@ textarea:focus-visible {
     .fab .icon {
         width: 20px;
         height: 20px;
+    }
+    
+    .fab-stack {
+        gap: 8px;
     }
 }
 
@@ -1301,7 +1288,7 @@ textarea:focus-visible {
         print-color-adjust: exact;
     }
     
-    .fab,
+    .fab-stack,
     .sidebar-container,
     .booking-actions,
     .mobile-booking-actions,

@@ -55,7 +55,8 @@ const state = {
     resizing: false,
     // ICS state
     icsTokens: [],          // Array of {token, created} – last entry is active
-    icsPublic: false         // Whether ICS export is public (no login needed)
+    icsPublic: false,        // Whether ICS export is public (no login needed)
+    icsDayFilter: false      // Whether users can filter by day in ICS modal
 };
 
 // =====================================================
@@ -1509,6 +1510,8 @@ async function showOptionsModal() {
     // ICS settings
     const icsPublicCb = document.getElementById('icsPublicCheckbox');
     if (icsPublicCb) icsPublicCb.checked = !!state.icsPublic;
+    const icsDayFilterCb = document.getElementById('icsDayFilterCheckbox');
+    if (icsDayFilterCb) icsDayFilterCb.checked = !!state.icsDayFilter;
     updateIcsTokenDisplay();
 }
 
@@ -1652,9 +1655,53 @@ async function saveSettings() {
         }
     }
     
+    const oldStartDate = state.eventStartDate;
+    const newDayCount = Math.max(1, Math.min(99, eventDayCount));
+    
+    // Handle start date change in event mode (booking migration)
+    if (newMode === 'event' && oldStartDate && eventStartDate && oldStartDate !== eventStartDate) {
+        const choice = await showStartDateChangeDialog(oldStartDate, eventStartDate);
+        if (choice === 'cancel') return;
+        
+        if (choice === 'relative') {
+            // Keep bookings at their day numbers; move out-of-range to Ablage
+            state.bookings.forEach(b => {
+                if (b.day > 0 && (b.day > newDayCount || b.day < 1)) b.day = 0;
+            });
+        } else if (choice === 'shift') {
+            // Shift bookings by the date offset
+            const oldDate = new Date(oldStartDate + 'T00:00:00');
+            const newDate = new Date(eventStartDate + 'T00:00:00');
+            const offsetDays = Math.round((oldDate - newDate) / 86400000);
+            state.bookings.forEach(b => {
+                if (b.day > 0) {
+                    const shifted = b.day + offsetDays;
+                    b.day = (shifted >= 1 && shifted <= newDayCount) ? shifted : 0;
+                }
+            });
+        } else if (choice === 'ablage') {
+            // Move all bookings to Ablage
+            state.bookings.forEach(b => { if (b.day > 0) b.day = 0; });
+        }
+        
+        // Offer to regenerate token after start date change
+        if (Array.isArray(state.icsTokens) && state.icsTokens.length > 0) {
+            if (confirm('Das Startdatum hat sich geändert.\nSoll ein neuer ICS-Token generiert werden?\n(Bestehende Kalender-Abonnements werden ungültig)')) {
+                const token = generateToken();
+                state.icsTokens.push({ token, created: new Date().toISOString() });
+            }
+        }
+    }
+    
     state.mode = newMode;
     state.eventStartDate = eventStartDate;
-    state.eventDayCount = Math.max(1, Math.min(99, eventDayCount));
+    state.eventDayCount = newDayCount;
+    
+    // Auto-generate token when first activating event mode without one
+    if (newMode === 'event' && (!Array.isArray(state.icsTokens) || state.icsTokens.length === 0)) {
+        const token = generateToken();
+        state.icsTokens.push({ token, created: new Date().toISOString() });
+    }
     
     // Colors
     const headerColor = rgbToHex(document.querySelector('.header-color-edit .color-swatch').style.backgroundColor);
@@ -1734,11 +1781,13 @@ async function saveSettings() {
         eventStartDate: state.eventStartDate,
         eventDayCount: state.eventDayCount,
         icsTokens: state.icsTokens || [],
-        icsPublic: document.getElementById('icsPublicCheckbox')?.checked || false
+        icsPublic: document.getElementById('icsPublicCheckbox')?.checked || false,
+        icsDayFilter: document.getElementById('icsDayFilterCheckbox')?.checked || false
     };
     
-    // Update state for icsPublic
+    // Update state for icsPublic / icsDayFilter
     state.icsPublic = configData.icsPublic;
+    state.icsDayFilter = configData.icsDayFilter;
     
     await saveToServer('settings.json', configData);
     await saveToServer('bookings.json', state.bookings);
@@ -1971,6 +2020,40 @@ function showImportModeDialog(count) {
 }
 
 /**
+ * Show dialog when event start date changes.
+ * Options: keep relative, shift to new dates, move all to Ablage.
+ * Returns: 'relative' | 'shift' | 'ablage' | 'cancel'
+ */
+function showStartDateChangeDialog(oldDate, newDate) {
+    const oldFormatted = new Date(oldDate + 'T00:00:00').toLocaleDateString('de-DE');
+    const newFormatted = new Date(newDate + 'T00:00:00').toLocaleDateString('de-DE');
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width:480px">
+                <h3>Startdatum geändert</h3>
+                <p style="font-size:0.9em;margin-bottom:15px">
+                    Das Startdatum ändert sich von <strong>${oldFormatted}</strong> zu <strong>${newFormatted}</strong>.<br>
+                    Wie sollen die bestehenden Termine behandelt werden?
+                </p>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <button type="button" data-choice="relative">Relativ beibehalten <span style="font-size:0.8em;opacity:0.7">— Tag-Nummern bleiben gleich</span></button>
+                    <button type="button" data-choice="shift">Auf neues Datum verschieben <span style="font-size:0.8em;opacity:0.7">— Termine folgen dem Kalender</span></button>
+                    <button type="button" class="danger-button" data-choice="ablage">Alle in Ablage <span style="font-size:0.8em;opacity:0.7">— Termine manuell neu verteilen</span></button>
+                    <button type="button" class="cancel-button" data-choice="cancel">Abbrechen</button>
+                </div>
+            </div>`;
+        overlay.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-choice]');
+            if (btn) { overlay.remove(); resolve(btn.dataset.choice); }
+        });
+        document.body.appendChild(overlay);
+    });
+}
+
+/**
  * Build a complete settings config object from current state + localStorage.
  * Used when saving settings and when import creates new categories.
  */
@@ -1989,7 +2072,8 @@ function buildFullConfigData() {
         eventStartDate: state.eventStartDate,
         eventDayCount: state.eventDayCount,
         icsTokens: state.icsTokens || [],
-        icsPublic: !!state.icsPublic
+        icsPublic: !!state.icsPublic,
+        icsDayFilter: !!state.icsDayFilter
     };
 }
 
@@ -2016,6 +2100,7 @@ function initializeDefaults() {
     state.eventDayCount = 3;
     state.icsTokens = [];
     state.icsPublic = false;
+    state.icsDayFilter = false;
     createTimeOptions();
     buildMobileTiles();
     createDayColumns();
@@ -2049,6 +2134,7 @@ async function initialize() {
             // ICS settings
             state.icsTokens = Array.isArray(config.icsTokens) ? config.icsTokens : [];
             state.icsPublic = !!config.icsPublic;
+            state.icsDayFilter = !!config.icsDayFilter;
             
             // Migrate hiddenDays from string format to numeric if needed
             const rawHidden = config.hiddenDays || [];
@@ -2336,21 +2422,28 @@ function showIcsModal() {
         catContainer.appendChild(chip);
     });
     
-    // Build day chips
+    // Build day chips (only if icsDayFilter is enabled by admin)
+    const daySection = document.getElementById('icsDaySection');
     const dayContainer = document.getElementById('icsDayChips');
     dayContainer.innerHTML = '';
-    const count = getDayCount();
-    for (let i = 1; i <= count; i++) {
-        const chip = document.createElement('label');
-        chip.className = 'ics-chip';
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.value = i;
-        cb.checked = true;
-        cb.addEventListener('change', updateIcsModal);
-        chip.appendChild(cb);
-        chip.appendChild(document.createTextNode(getDayLabel(i)));
-        dayContainer.appendChild(chip);
+    
+    if (state.icsDayFilter) {
+        if (daySection) daySection.style.display = '';
+        const count = getDayCount();
+        for (let i = 1; i <= count; i++) {
+            const chip = document.createElement('label');
+            chip.className = 'ics-chip';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = i;
+            cb.checked = true;
+            cb.addEventListener('change', updateIcsModal);
+            chip.appendChild(cb);
+            chip.appendChild(document.createTextNode(getDayLabel(i)));
+            dayContainer.appendChild(chip);
+        }
+    } else {
+        if (daySection) daySection.style.display = 'none';
     }
     
     updateIcsModal();
