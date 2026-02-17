@@ -13,6 +13,12 @@ WeekWise ist ein benutzerfreundliches Tool zur Erstellung und Verwaltung von Woc
 - **Persistente Booking-IDs** – Jedes Booking erhält eine UUID für stabile Identifikation (ICS, Sync).
 - **Drag & Drop auf Uhrzeit** – Termine können auf eine andere Uhrzeit gezogen werden (15-Min-Raster).
 - **Resize-Handle** – Dauer eines Termins per Ziehen am unteren Rand ändern.
+- **Kontextmenü** – Rechtsklick auf Termine für schnelle Aktionen (Bearbeiten, Duplizieren, Kategorie ändern, Löschen). Unterstützt Einzel- und Mehrfachauswahl.
+- **Hilfe-Button** – Neuer FAB mit Übersicht aller Tastenkürzel und URL-Parameter.
+- **Shift/Strg + Drag = Kopieren** – Modifier-Taste kann auch während des Drags gedrückt werden.
+- **Scroll-Hinweis** – Optischer Pfeil bei horizontal scrollbaren Event-Ansichten.
+- **Editierbare Standard-Kategorie** – Name und Farbe der Default-Kategorie sind jetzt änderbar.
+- **Kategorie-Zähler** – In den Einstellungen wird pro Kategorie die Anzahl zugeordneter Termine angezeigt.
 
 > Vollständiges Changelog: [CHANGELOG.md](CHANGELOG.md)
 
@@ -42,6 +48,8 @@ WeekWise ist ein benutzerfreundliches Tool zur Erstellung und Verwaltung von Woc
 - **Drucken:** Plan als A4 Landscape drucken, mit wählbaren Optionen
 - **Tage ein-/ausblenden:** Bestimmte Tage können ausgeblendet werden. Leere Tage können automatisch ausgeblendet werden
 - **Kalender-Export:** ICS-Download und Abo-URLs (webcal://) für Kalender-Integration
+- **Kontextmenü:** Rechtsklick für schnelle Aktionen (Einzel- und Mehrfachauswahl)
+- **Hilfe-Overlay:** Tastenkürzel und URL-Parameter auf einen Blick
 
 ## Installation
 

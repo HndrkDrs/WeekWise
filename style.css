@@ -78,6 +78,11 @@
     mask-image: url('ico/calendar.svg');
 }
 
+.icon.help {
+    -webkit-mask-image: url('ico/help.svg');
+    mask-image: url('ico/help.svg');
+}
+
 /* =====================================================
    Sidebar Styles
    ===================================================== */
@@ -207,10 +212,35 @@ body.readonly .mobile-booking {
 
 .desktop-scroll-wrapper {
     overflow-x: visible;
+    position: relative;
 }
 
 .desktop-scroll-wrapper.event-scroll {
     overflow-x: auto;
+}
+
+/* Scroll hint: fade gradient on right edge */
+.desktop-scroll-wrapper.event-scroll::after {
+    content: '→';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 36px;
+    height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.85) 50%, white);
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 6px;
+    font-size: 1.2em;
+    color: var(--text-light);
+    transition: opacity 0.3s;
+}
+
+.desktop-scroll-wrapper.event-scroll.scrolled-end::after {
+    opacity: 0;
 }
 
 .weekdays {
@@ -340,6 +370,10 @@ body.readonly .mobile-booking {
     outline-offset: -2px;
 }
 
+#contentSidebar.drag-over {
+    background: rgba(33, 150, 243, 0.04);
+}
+
 .drag-ghost {
     position: absolute;
     top: -9999px;
@@ -351,6 +385,22 @@ body.readonly .mobile-booking {
     font-size: 0.85em;
     white-space: nowrap;
     pointer-events: none;
+}
+
+/* Floating copy indicator shown during drag when modifier pressed */
+.drag-ghost.drag-ghost-floating {
+    position: fixed;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    box-shadow: 0 2px 8px var(--shadow);
+    animation: ghostFadeIn 0.15s ease;
+}
+
+@keyframes ghostFadeIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* Resize Handle */
@@ -427,6 +477,109 @@ body.readonly .mobile-booking {
     cursor: pointer;
     font-size: 0.8em;
     color: white;
+}
+
+/* =====================================================
+   Context Menu
+   ===================================================== */
+
+.context-menu {
+    position: fixed;
+    z-index: 2000;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06);
+    min-width: 180px;
+    padding: 4px 0;
+    font-size: 0.88em;
+    animation: ctxFadeIn 0.12s ease;
+    user-select: none;
+}
+
+@keyframes ctxFadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--text-dark);
+    transition: background 0.1s;
+    position: relative;
+}
+
+.context-menu-item:hover {
+    background: var(--bg-light);
+}
+
+.context-menu-item.danger {
+    color: var(--danger);
+}
+
+.context-menu-item.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 0;
+}
+
+.context-menu-item .ctx-icon {
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 0.9em;
+}
+
+.context-menu-item .ctx-label {
+    flex: 1;
+}
+
+.context-menu-item .ctx-arrow {
+    font-size: 0.75em;
+    opacity: 0.5;
+    margin-left: 12px;
+}
+
+/* Submenu */
+.context-submenu {
+    position: absolute;
+    left: 100%;
+    top: -4px;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06);
+    min-width: 160px;
+    padding: 4px 0;
+    display: none;
+    z-index: 2001;
+}
+
+.context-menu-item:hover > .context-submenu {
+    display: block;
+}
+
+.context-submenu .context-menu-item .ctx-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.1);
+    flex-shrink: 0;
+}
+
+.context-submenu .context-menu-item .ctx-check {
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 0.8em;
 }
 
 .edit-button {
@@ -791,6 +944,47 @@ body.readonly .mobile-booking {
     margin-top: 4px;
 }
 
+/* =====================================================
+   Help Modal
+   ===================================================== */
+
+.help-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88em;
+    margin-bottom: 8px;
+}
+
+.help-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--bg-light);
+    vertical-align: top;
+}
+
+.help-table td:first-child {
+    white-space: nowrap;
+    font-weight: 500;
+    width: 45%;
+}
+
+.help-table kbd {
+    display: inline-block;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.88em;
+    font-family: inherit;
+    line-height: 1.4;
+}
+
+.help-table code {
+    background: var(--bg-light);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.88em;
+}
+
 .form-group {
     margin-bottom: 15px;
 }
@@ -923,6 +1117,22 @@ textarea:focus-visible {
 .color-delete {
     background-color: var(--danger);
     cursor: pointer;
+}
+
+.category-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background: var(--bg-light);
+    color: var(--text-light);
+    font-size: 0.78em;
+    font-weight: 600;
+    flex-shrink: 0;
+    border: 1px solid var(--border-color);
 }
 
 .header-color-edit input,
@@ -1213,6 +1423,7 @@ textarea:focus-visible {
     
     .ablage-tile {
         display: block;
+        margin-top: 10px;
     }
     
     .delete-button {
@@ -1293,7 +1504,8 @@ textarea:focus-visible {
     .booking-actions,
     .mobile-booking-actions,
     .print-popup,
-    .modal {
+    .modal,
+    .context-menu {
         display: none !important;
     }
     

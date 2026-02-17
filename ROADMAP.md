@@ -48,6 +48,15 @@
 - ✅ Auto-Token bei Event-Modus-Aktivierung
 - ✅ Startdatum-Änderungsdialog (Termine migrieren)
 - ✅ Optionale Tagesauswahl im ICS-Dialog
+- ✅ Kontextmenü (Rechtsklick: Bearbeiten, Duplizieren, Kategorie, Löschen)
+- ✅ Hilfe-Button mit Tastenkürzel- und URL-Parameter-Übersicht
+- ✅ Shift/Strg + Drag = Kopieren (auch während des Drags)
+- ✅ Scroll-Hinweis bei vielen Tagen (Event-Modus)
+- ✅ Editierbare Standard-Kategorie (Name/Farbe änderbar)
+- ✅ Kategorie-Zähler in den Einstellungen
+- ✅ Mobile Ablage: nur für Admins, Termine werden korrekt gerendert
+- ✅ Drag aus Sidebar & Drop auf gesamte Sidebar-Fläche
+- ✅ Resize öffnet kein falsches Modal mehr
 - ✅ Installer auf Version 2.3 aktualisiert
 
 ---

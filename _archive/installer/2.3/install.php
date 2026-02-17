@@ -68,6 +68,7 @@ $files = [
     'ico/settings.svg',
     'ico/chevron-left.svg',
     'ico/chevron-right.svg',
+    'ico/help.svg',
     'ico/favicon.ico'
 ];
 

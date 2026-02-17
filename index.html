@@ -43,6 +43,9 @@
         <button class="fab" id="editButton" aria-label="Bearbeiten">
             <span class="icon edit"></span>
         </button>
+        <button class="fab" id="helpButton" style="display:none" aria-label="Hilfe">
+            <span class="icon help"></span>
+        </button>
     </div>
 
     <!-- Print Options Popup -->
@@ -125,7 +128,7 @@
                 <div class="form-group">
                     <label for="bookingCategory">Kategorie</label>
                     <select id="bookingCategory">
-                        <option value="default">Standard</option>
+                        <!-- populated dynamically by buildCategoryOptions() -->
                     </select>
                 </div>
                 <div class="form-group" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
@@ -323,6 +326,42 @@
         </button>
         <div id="contentSidebar" class="sidebar">
             <div class="weekday" id="Ablage">Ablage</div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content settings-content">
+            <h3>Hilfe</h3>
+
+            <div class="settings-section-divider">Steuerung</div>
+            <table class="help-table">
+                <tr><td><kbd>Klick</kbd> auf Spalte</td><td>Neuen Termin erstellen</td></tr>
+                <tr><td><kbd>Klick</kbd> auf Termin</td><td>Termin aufklappen / Aktionen</td></tr>
+                <tr><td><kbd>Strg</kbd> + <kbd>Klick</kbd></td><td>Mehrere Termine auswählen</td></tr>
+                <tr><td><kbd>Entf</kbd></td><td>Ausgewählte / aufgeklappte Termine löschen</td></tr>
+                <tr><td><kbd>Esc</kbd></td><td>Auswahl aufheben / Modal schließen</td></tr>
+                <tr><td><kbd>Drag</kbd></td><td>Termin verschieben (Tag + Uhrzeit)</td></tr>
+                <tr><td><kbd>Shift</kbd> / <kbd>Strg</kbd> + <kbd>Drag</kbd></td><td>Termin kopieren</td></tr>
+                <tr><td>Unterer Rand ziehen</td><td>Termin-Dauer per Resize ändern</td></tr>
+                <tr><td><kbd>Rechtsklick</kbd></td><td>Kontextmenü (Bearbeiten, Kopieren, Kategorie, Löschen)</td></tr>
+            </table>
+
+            <div class="settings-section-divider">URL-Parameter</div>
+            <table class="help-table">
+                <tr><td><code>?embedded</code></td><td>Ohne Rahmen, ohne FABs (für iFrame)</td></tr>
+                <tr><td><code>?readonly</code></td><td>Nur Lesen, kein Login</td></tr>
+                <tr><td><code>?compact</code></td><td>Ohne Kopfzeile</td></tr>
+                <tr><td><code>?day=1,3,5</code></td><td>Nur bestimmte Tage anzeigen</td></tr>
+                <tr><td><code>?hide=6,7</code></td><td>Bestimmte Tage ausblenden</td></tr>
+                <tr><td><code>?hideempty</code></td><td>Leere Tage ausblenden</td></tr>
+                <tr><td><code>?category=Name</code></td><td>Nur eine Kategorie anzeigen</td></tr>
+                <tr><td><code>?view=ics&amp;embedded</code></td><td>Nur ICS-Export anzeigen</td></tr>
+            </table>
+
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                <button type="button" class="cancel-button" onclick="closeHelpModal()">Schließen</button>
+            </div>
         </div>
     </div>
 

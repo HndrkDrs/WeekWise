@@ -53,6 +53,7 @@ const state = {
     dragIsCopy: false,
     dragGhost: null,
     resizing: false,
+    justResized: false,
     // ICS state
     icsTokens: [],          // Array of {token, created} – last entry is active
     icsPublic: false,        // Whether ICS export is public (no login needed)
@@ -95,6 +96,50 @@ function getDayLabel(dayNumber) {
 function getDayShortLabel(dayNumber) {
     const shorts = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
     return shorts[(dayNumber - 1) % 7] || `T${dayNumber}`;
+}
+
+/**
+ * Ensure the 'default' category always exists in bookingColors.
+ * Returns the updated array (also saves to localStorage).
+ */
+function ensureDefaultCategory() {
+    const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+    let defaultCat = bookingColors.find(c => c.id === 'default');
+    if (!defaultCat) {
+        const secondaryColor = getComputedStyle(document.documentElement)
+            .getPropertyValue('--secondary').trim() || '#FFC107';
+        defaultCat = { id: 'default', name: 'Standard', color: secondaryColor };
+        bookingColors.unshift(defaultCat);
+        localStorage.setItem('bookingColors', JSON.stringify(bookingColors));
+    }
+    return bookingColors;
+}
+
+/**
+ * Get the display name of the default category.
+ */
+function getDefaultCategoryName() {
+    const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+    const defaultCat = bookingColors.find(c => c.id === 'default');
+    return defaultCat ? defaultCat.name : 'Standard';
+}
+
+/**
+ * Build category <option> elements for a <select>.
+ * Populates with default category + all custom categories.
+ */
+function buildCategoryOptions(selectEl) {
+    const bookingColors = ensureDefaultCategory();
+    selectEl.innerHTML = '';
+    bookingColors.forEach(color => {
+        const option = document.createElement('option');
+        option.value = color.id;
+        option.textContent = color.name;
+        if (color.id !== 'default') {
+            option.style.color = rgbToHex(color.color);
+        }
+        selectEl.appendChild(option);
+    });
 }
 
 /**
@@ -335,6 +380,25 @@ function ensureBookingId(booking) {
  */
 function snapTo15(minutes) {
     return Math.round(minutes / 15) * 15;
+}
+
+/**
+ * Show or hide the drag-copy ghost indicator.
+ * Creates it lazily, removes when no longer copying.
+ */
+function updateDragGhost(isCopy, bookingIndex) {
+    if (isCopy && !state.dragGhost) {
+        const booking = state.bookings[bookingIndex];
+        if (!booking) return;
+        const ghost = document.createElement('div');
+        ghost.className = 'drag-ghost drag-ghost-floating';
+        ghost.textContent = '+ Kopie';
+        document.body.appendChild(ghost);
+        state.dragGhost = ghost;
+    } else if (!isCopy && state.dragGhost) {
+        state.dragGhost.remove();
+        state.dragGhost = null;
+    }
 }
 
 // =====================================================
@@ -636,12 +700,15 @@ function buildMobileTiles() {
         container.appendChild(tile);
     }
     
-    // Ablage tile (always last)
-    const ablageTile = document.createElement('div');
-    ablageTile.className = 'day-tile ablage-tile';
-    ablageTile.id = 'ablage-tile';
-    ablageTile.innerHTML = '<div class="day-name filing-tile">Ablage</div><div class="day-bookings"></div>';
-    container.appendChild(ablageTile);
+    // Ablage tile (only for logged-in users)
+    if (state.isLoggedIn) {
+        const ablageTile = document.createElement('div');
+        ablageTile.className = 'day-tile ablage-tile';
+        ablageTile.id = 'ablage-tile';
+        ablageTile.dataset.day = '0';
+        ablageTile.innerHTML = '<div class="day-name filing-tile">Ablage</div><div class="day-bookings"></div>';
+        container.appendChild(ablageTile);
+    }
 }
 
 /**
@@ -722,7 +789,18 @@ function createDayColumns() {
         const scrollWrapper = document.getElementById('desktopScrollWrapper');
         weekdaysContainer.classList.toggle('event-scroll', needsScroll);
         container.classList.toggle('event-scroll', needsScroll);
-        if (scrollWrapper) scrollWrapper.classList.toggle('event-scroll', needsScroll);
+        if (scrollWrapper) {
+            scrollWrapper.classList.toggle('event-scroll', needsScroll);
+            scrollWrapper.classList.remove('scrolled-end');
+            if (needsScroll) {
+                scrollWrapper.onscroll = () => {
+                    const atEnd = scrollWrapper.scrollLeft + scrollWrapper.clientWidth >= scrollWrapper.scrollWidth - 5;
+                    scrollWrapper.classList.toggle('scrolled-end', atEnd);
+                };
+            } else {
+                scrollWrapper.onscroll = null;
+            }
+        }
         if (needsScroll) {
             weekdaysContainer.style.setProperty('--day-count', visibleDays.length);
             container.style.setProperty('--day-count', visibleDays.length);
@@ -754,6 +832,7 @@ function createDayColumns() {
         // Click handler for creating new bookings
         if (!state.urlParams.readonly && !state.urlParams.embedded) {
             column.addEventListener('click', (e) => {
+                if (state.justResized) return;
                 if (state.isLoggedIn && e.target.classList.contains('day-column')) {
                     state.selectedDay = day;
                     state.selectedColumn = column;
@@ -776,16 +855,7 @@ function createDayColumns() {
                     }
                     
                     // Populate category select
-                    const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
-                    const categorySelect = document.getElementById('bookingCategory');
-                    categorySelect.innerHTML = '<option value="default">Standard</option>';
-                    bookingColors.forEach(color => {
-                        const option = document.createElement('option');
-                        option.textContent = color.name;
-                        option.value = color.id;
-                        option.style.color = rgbToHex(color.color);
-                        categorySelect.appendChild(option);
-                    });
+                    buildCategoryOptions(document.getElementById('bookingCategory'));
                     
                     document.getElementById('modalDeleteButton').style.display = 'none';
                     const dupBtn = document.getElementById('modalDuplicateButton');
@@ -801,7 +871,9 @@ function createDayColumns() {
             column.addEventListener('dragover', (e) => {
                 if (state.dragBookingIndex === null) return;
                 e.preventDefault();
+                state.dragIsCopy = e.shiftKey || e.ctrlKey;
                 e.dataTransfer.dropEffect = state.dragIsCopy ? 'copy' : 'move';
+                updateDragGhost(state.dragIsCopy, state.dragBookingIndex);
                 column.classList.add('drag-over');
             });
             column.addEventListener('dragleave', () => {
@@ -810,6 +882,7 @@ function createDayColumns() {
             column.addEventListener('drop', async (e) => {
                 e.preventDefault();
                 column.classList.remove('drag-over');
+                state.dragIsCopy = e.shiftKey || e.ctrlKey;
                 const bookingIndex = state.dragBookingIndex;
                 if (bookingIndex === null || bookingIndex < 0) return;
                 
@@ -958,19 +1031,10 @@ function createBookingElement(booking, index, isMobile) {
             // Prevent native drag when resizing
             if (state.resizing) { e.preventDefault(); return; }
             state.dragBookingIndex = index;
-            state.dragIsCopy = e.shiftKey;
+            state.dragIsCopy = e.shiftKey || e.ctrlKey;
             el.classList.add('dragging');
-            e.dataTransfer.effectAllowed = e.shiftKey ? 'copy' : 'move';
+            e.dataTransfer.effectAllowed = 'all';
             e.dataTransfer.setData('text/plain', String(index));
-            // Show copy cursor hint
-            if (e.shiftKey) {
-                const ghost = document.createElement('div');
-                ghost.className = 'drag-ghost';
-                ghost.textContent = '+ ' + booking.title;
-                document.body.appendChild(ghost);
-                e.dataTransfer.setDragImage(ghost, 0, 0);
-                state.dragGhost = ghost;
-            }
         });
         el.addEventListener('dragend', () => {
             el.classList.remove('dragging');
@@ -1015,6 +1079,8 @@ function createBookingElement(booking, index, isMobile) {
                     document.removeEventListener('mouseup', onMouseUp);
                     el.classList.remove('resizing');
                     state.resizing = false;
+                    state.justResized = true;
+                    setTimeout(() => { state.justResized = false; }, 200);
                     el.setAttribute('draggable', 'true');
                     
                     const newHeight = parseInt(el.style.height);
@@ -1089,6 +1155,13 @@ function createBookingElement(booking, index, isMobile) {
             el.classList.toggle('expanded');
         }
     });
+    
+    // Right-click context menu (admin only)
+    if (state.isLoggedIn && !state.urlParams.readonly) {
+        el.addEventListener('contextmenu', (e) => {
+            showBookingContextMenu(e, index);
+        });
+    }
     
     return el;
 }
@@ -1171,7 +1244,15 @@ function renderMobileBookings(bookings) {
     });
     
     bookings.forEach((booking, index) => {
-        if (booking.day === 0) return; // Ablage handled by sidebar
+        if (booking.day === 0) {
+            // Ablage: render into mobile Ablage tile if logged in
+            const ablageTile = tileMap[0];
+            if (ablageTile && state.isLoggedIn) {
+                const bookingEl = createBookingElement(booking, index, true);
+                ablageTile.appendChild(bookingEl);
+            }
+            return;
+        }
         const tile = tileMap[booking.day];
         if (tile && tile.style.display !== 'none') {
             const bookingEl = createBookingElement(booking, index, true);
@@ -1249,6 +1330,30 @@ function renderSidebarBookings(bookings) {
         .forEach((booking, idx) => {
             const originalIndex = state.bookings.indexOf(booking);
             const bookingEl = createBookingElement(booking, originalIndex, true);
+            
+            // Make sidebar bookings draggable (admin only, desktop)
+            if (state.isLoggedIn && !state.urlParams.readonly && !state.urlParams.embedded) {
+                bookingEl.setAttribute('draggable', 'true');
+                bookingEl.addEventListener('dragstart', (e) => {
+                    if (state.resizing) { e.preventDefault(); return; }
+                    state.dragBookingIndex = originalIndex;
+                    state.dragIsCopy = e.shiftKey || e.ctrlKey;
+                    bookingEl.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'all';
+                    e.dataTransfer.setData('text/plain', String(originalIndex));
+                });
+                bookingEl.addEventListener('dragend', () => {
+                    bookingEl.classList.remove('dragging');
+                    state.dragBookingIndex = null;
+                    state.dragIsCopy = false;
+                    if (state.dragGhost) {
+                        state.dragGhost.remove();
+                        state.dragGhost = null;
+                    }
+                    document.querySelectorAll('.day-column').forEach(c => c.classList.remove('drag-over'));
+                });
+            }
+            
             sidebar.appendChild(bookingEl);
         });
 }
@@ -1310,16 +1415,7 @@ function editBooking(index) {
     if (!booking) return;
     
     // Populate category select
-    const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
-    const categorySelect = document.getElementById('bookingCategory');
-    categorySelect.innerHTML = '<option value="default">Standard</option>';
-    bookingColors.forEach(color => {
-        const option = document.createElement('option');
-        option.textContent = color.name;
-        option.style.color = rgbToHex(color.color);
-        option.value = color.id;
-        categorySelect.appendChild(option);
-    });
+    buildCategoryOptions(document.getElementById('bookingCategory'));
     
     // Populate day select dynamically
     buildDaySelect();
@@ -1429,6 +1525,7 @@ function login() {
         document.getElementById('newBookingButton').style.display = 'flex';
         document.getElementById('printButton').style.display = 'flex';
         document.getElementById('icsButton').style.display = 'flex';
+        document.getElementById('helpButton').style.display = 'flex';
         closeLoginModal();
         buildMobileTiles();
         createDayColumns(); // Re-render to show greyed-out hidden days
@@ -1446,6 +1543,7 @@ function logout() {
         document.getElementById('newBookingButton').style.display = 'none';
         document.getElementById('printButton').style.display = 'none';
         document.getElementById('icsButton').style.display = 'none';
+        document.getElementById('helpButton').style.display = 'none';
         // Close print popup if open
         document.getElementById('printPopup')?.classList.remove('visible');
         closeOptionsModal();
@@ -1575,7 +1673,14 @@ function renderColorOptions() {
     if (!container) return;
     
     container.innerHTML = '';
-    const savedColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+    const savedColors = ensureDefaultCategory();
+    
+    // Count bookings per category
+    const categoryCounts = {};
+    state.bookings.forEach(b => {
+        const catId = b.categoryID || 'default';
+        categoryCounts[catId] = (categoryCounts[catId] || 0) + 1;
+    });
     
     savedColors.forEach(({ name, color, id }) => {
         const colorEdit = document.createElement('div');
@@ -1588,11 +1693,24 @@ function renderColorOptions() {
         input.type = 'text';
         input.value = name;
         input.placeholder = 'Kategoriename';
-        const delIcon = document.createElement('span');
-        delIcon.className = 'icon del color-delete';
         colorEdit.appendChild(swatch);
         colorEdit.appendChild(input);
-        colorEdit.appendChild(delIcon);
+        
+        // Booking count badge
+        const count = categoryCounts[id] || 0;
+        const badge = document.createElement('span');
+        badge.className = 'category-count';
+        badge.textContent = count;
+        badge.title = `${count} Termin${count !== 1 ? 'e' : ''}`;
+        colorEdit.appendChild(badge);
+        
+        // Default category: no delete button
+        if (id !== 'default') {
+            const delIcon = document.createElement('span');
+            delIcon.className = 'icon del color-delete';
+            colorEdit.appendChild(delIcon);
+        }
+        
         container.appendChild(colorEdit);
     });
     
@@ -2393,20 +2511,7 @@ function showIcsModal() {
     // Build category chips
     const catContainer = document.getElementById('icsCategoryChips');
     catContainer.innerHTML = '';
-    const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
-    
-    // Default category
-    const defaultChip = document.createElement('label');
-    defaultChip.className = 'ics-chip';
-    const defaultCb = document.createElement('input');
-    defaultCb.type = 'checkbox';
-    defaultCb.value = 'default';
-    defaultCb.dataset.name = '';
-    defaultCb.checked = true;
-    defaultCb.addEventListener('change', updateIcsModal);
-    defaultChip.appendChild(defaultCb);
-    defaultChip.appendChild(document.createTextNode('Standard'));
-    catContainer.appendChild(defaultChip);
+    const bookingColors = ensureDefaultCategory();
     
     bookingColors.forEach(c => {
         const chip = document.createElement('label');
@@ -2454,6 +2559,234 @@ function closeIcsModal() {
     document.getElementById('icsModal').style.display = 'none';
 }
 
+function showHelpModal() {
+    document.getElementById('helpModal').style.display = 'flex';
+}
+
+function closeHelpModal() {
+    document.getElementById('helpModal').style.display = 'none';
+}
+
+// =====================================================
+// Context Menu
+// =====================================================
+
+/**
+ * Remove any open context menu from the DOM.
+ */
+function closeContextMenu() {
+    document.querySelectorAll('.context-menu').forEach(m => m.remove());
+}
+
+/**
+ * Show a custom context menu for a booking element.
+ * Supports single booking and multi-selection modes.
+ */
+function showBookingContextMenu(e, bookingIndex) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeContextMenu();
+    
+    const isMulti = state.selectedBookingIndices.size > 1 && state.selectedBookingIndices.has(bookingIndex);
+    const menu = document.createElement('div');
+    menu.className = 'context-menu';
+    
+    if (!isMulti) {
+        // ── Single booking menu ──
+        // Bearbeiten
+        const editItem = createCtxItem('✎', 'Bearbeiten', () => { closeContextMenu(); editBooking(bookingIndex); });
+        menu.appendChild(editItem);
+        
+        // Duplizieren
+        const dupItem = createCtxItem('⧉', 'Duplizieren', () => { closeContextMenu(); duplicateBookingDirect(bookingIndex); });
+        menu.appendChild(dupItem);
+        
+        // Divider
+        menu.appendChild(createCtxDivider());
+        
+        // Kategorie submenu
+        menu.appendChild(createCategorySubmenu([bookingIndex]));
+        
+        // Divider
+        menu.appendChild(createCtxDivider());
+        
+        // Löschen
+        const delItem = createCtxItem('🗑', 'Löschen', () => { closeContextMenu(); deleteBooking(bookingIndex); }, true);
+        menu.appendChild(delItem);
+    } else {
+        // ── Multi-selection menu ──
+        const count = state.selectedBookingIndices.size;
+        const indices = Array.from(state.selectedBookingIndices);
+        
+        // Header hint
+        const header = document.createElement('div');
+        header.className = 'context-menu-item disabled';
+        header.innerHTML = `<span class="ctx-icon">☰</span><span class="ctx-label">${count} Termine ausgewählt</span>`;
+        menu.appendChild(header);
+        
+        menu.appendChild(createCtxDivider());
+        
+        // Kategorie submenu
+        menu.appendChild(createCategorySubmenu(indices));
+        
+        // Divider
+        menu.appendChild(createCtxDivider());
+        
+        // Löschen
+        const delItem = createCtxItem('🗑', `${count} Termine löschen`, () => { closeContextMenu(); deleteSelectedBookings(); }, true);
+        menu.appendChild(delItem);
+    }
+    
+    document.body.appendChild(menu);
+    positionContextMenu(menu, e.clientX, e.clientY);
+    
+    // Close on outside click (next tick to avoid immediate close)
+    setTimeout(() => {
+        const closeHandler = (ev) => {
+            if (!menu.contains(ev.target)) {
+                closeContextMenu();
+                document.removeEventListener('mousedown', closeHandler, true);
+            }
+        };
+        document.addEventListener('mousedown', closeHandler, true);
+    }, 0);
+}
+
+/**
+ * Create a context menu item.
+ */
+function createCtxItem(icon, label, onclick, isDanger) {
+    const item = document.createElement('div');
+    item.className = 'context-menu-item' + (isDanger ? ' danger' : '');
+    item.innerHTML = `<span class="ctx-icon">${icon}</span><span class="ctx-label">${escapeHtml(label)}</span>`;
+    item.addEventListener('click', onclick);
+    return item;
+}
+
+/**
+ * Create a context menu divider.
+ */
+function createCtxDivider() {
+    const div = document.createElement('div');
+    div.className = 'context-menu-divider';
+    return div;
+}
+
+/**
+ * Create the category submenu item with flyout.
+ */
+function createCategorySubmenu(bookingIndices) {
+    const item = document.createElement('div');
+    item.className = 'context-menu-item';
+    item.innerHTML = `<span class="ctx-icon">●</span><span class="ctx-label">Kategorie</span><span class="ctx-arrow">▸</span>`;
+    
+    const submenu = document.createElement('div');
+    submenu.className = 'context-submenu';
+    
+    const categories = ensureDefaultCategory();
+    
+    // Determine current category (for single selection, show checkmark)
+    let currentCatId = null;
+    if (bookingIndices.length === 1) {
+        const b = state.bookings[bookingIndices[0]];
+        currentCatId = b ? (b.categoryID || 'default') : null;
+    }
+    
+    categories.forEach(cat => {
+        const catItem = document.createElement('div');
+        catItem.className = 'context-menu-item';
+        
+        const checkmark = currentCatId === cat.id ? '✔' : '';
+        const swatchColor = sanitizeColor(cat.color);
+        
+        catItem.innerHTML = `
+            <span class="ctx-check">${checkmark}</span>
+            <span class="ctx-swatch" style="background:${swatchColor}"></span>
+            <span class="ctx-label">${escapeHtml(cat.name)}</span>
+        `;
+        
+        catItem.addEventListener('click', async () => {
+            closeContextMenu();
+            await applyCategoryToBookings(bookingIndices, cat.id);
+        });
+        
+        submenu.appendChild(catItem);
+    });
+    
+    item.appendChild(submenu);
+    return item;
+}
+
+/**
+ * Apply a category to one or more bookings by index.
+ */
+async function applyCategoryToBookings(indices, categoryId) {
+    const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+    const colorConfig = bookingColors.find(c => c.id === categoryId);
+    const color = colorConfig ? colorConfig.color : 'var(--secondary)';
+    
+    indices.forEach(i => {
+        const booking = state.bookings[i];
+        if (booking) {
+            booking.categoryID = categoryId;
+            booking.color = color;
+            if (colorConfig) booking.categoryName = colorConfig.name;
+        }
+    });
+    
+    await saveToServer('bookings.json', state.bookings);
+    clearMultiSelection();
+    createDayColumns();
+}
+
+/**
+ * Duplicate a booking directly (without opening the edit modal).
+ */
+async function duplicateBookingDirect(index) {
+    const source = state.bookings[index];
+    if (!source) return;
+    
+    const copy = JSON.parse(JSON.stringify(source));
+    copy.id = generateBookingId();
+    state.bookings.push(copy);
+    
+    await saveToServer('bookings.json', state.bookings);
+    buildMobileTiles();
+    createDayColumns();
+}
+
+/**
+ * Position a context menu on screen, keeping it within viewport bounds.
+ */
+function positionContextMenu(menu, x, y) {
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    
+    // Adjust after render to keep within viewport
+    requestAnimationFrame(() => {
+        const rect = menu.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        
+        if (rect.right > vw - 8) {
+            menu.style.left = `${Math.max(8, x - rect.width)}px`;
+        }
+        if (rect.bottom > vh - 8) {
+            menu.style.top = `${Math.max(8, y - rect.height)}px`;
+        }
+        
+        // Also check submenus – flip if needed
+        const subs = menu.querySelectorAll('.context-submenu');
+        subs.forEach(sub => {
+            const subRect = sub.getBoundingClientRect();
+            if (subRect.right > vw - 8) {
+                sub.style.left = 'auto';
+                sub.style.right = '100%';
+            }
+        });
+    });
+}
+
 // =====================================================
 // Event Listeners
 // =====================================================
@@ -2479,6 +2812,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // ICS button
     document.getElementById('icsButton')?.addEventListener('click', () => {
         showIcsModal();
+    });
+    
+    // Help button
+    document.getElementById('helpButton')?.addEventListener('click', () => {
+        showHelpModal();
     });
     
     // ICS modal buttons
@@ -2532,16 +2870,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('bookingEnd').value = '09:00';
             
             // Populate category select
-            const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
-            const categorySelect = document.getElementById('bookingCategory');
-            categorySelect.innerHTML = '<option value="default">Standard</option>';
-            bookingColors.forEach(color => {
-                const option = document.createElement('option');
-                option.textContent = color.name;
-                option.value = color.id;
-                option.style.color = rgbToHex(color.color);
-                categorySelect.appendChild(option);
-            });
+            buildCategoryOptions(document.getElementById('bookingCategory'));
             
             document.getElementById('modalDeleteButton').style.display = 'none';
             const dupBtn = document.getElementById('modalDuplicateButton');
@@ -2634,40 +2963,53 @@ document.addEventListener('DOMContentLoaded', () => {
     // Import file handler
     document.getElementById('importFile')?.addEventListener('change', importBookings);
     
-    // Sidebar (Ablage) drag & drop target
+    // Sidebar (Ablage) drag & drop target – both the header and entire sidebar
     const sidebarEl = document.getElementById('Ablage');
-    if (sidebarEl) {
-        sidebarEl.addEventListener('dragover', (e) => {
-            if (state.dragBookingIndex === null) return;
-            e.preventDefault();
-            e.dataTransfer.dropEffect = state.dragIsCopy ? 'copy' : 'move';
-            sidebarEl.classList.add('drag-over');
-        });
-        sidebarEl.addEventListener('dragleave', () => {
-            sidebarEl.classList.remove('drag-over');
-        });
-        sidebarEl.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            sidebarEl.classList.remove('drag-over');
-            const bookingIndex = state.dragBookingIndex;
-            if (bookingIndex === null || bookingIndex < 0) return;
-            
-            const sourceBooking = state.bookings[bookingIndex];
-            if (!sourceBooking || sourceBooking.day === 0) return;
-            
-            if (state.dragIsCopy) {
-                const copy = JSON.parse(JSON.stringify(sourceBooking));
-                copy.id = generateBookingId();
-                copy.day = 0;
-                state.bookings.push(copy);
-            } else {
-                sourceBooking.day = 0;
-            }
-            
-            await saveToServer('bookings.json', state.bookings);
-            createDayColumns();
-        });
-    }
+    const contentSidebarEl = document.getElementById('contentSidebar');
+    
+    const handleSidebarDragOver = (e) => {
+        if (state.dragBookingIndex === null) return;
+        e.preventDefault();
+        state.dragIsCopy = e.shiftKey || e.ctrlKey;
+        e.dataTransfer.dropEffect = state.dragIsCopy ? 'copy' : 'move';
+        updateDragGhost(state.dragIsCopy, state.dragBookingIndex);
+        if (sidebarEl) sidebarEl.classList.add('drag-over');
+    };
+    const handleSidebarDragLeave = (e) => {
+        // Only remove highlight when actually leaving the sidebar container
+        const related = e.relatedTarget;
+        if (contentSidebarEl && contentSidebarEl.contains(related)) return;
+        if (sidebarEl) sidebarEl.classList.remove('drag-over');
+    };
+    const handleSidebarDrop = async (e) => {
+        e.preventDefault();
+        if (sidebarEl) sidebarEl.classList.remove('drag-over');
+        state.dragIsCopy = e.shiftKey || e.ctrlKey;
+        const bookingIndex = state.dragBookingIndex;
+        if (bookingIndex === null || bookingIndex < 0) return;
+        
+        const sourceBooking = state.bookings[bookingIndex];
+        if (!sourceBooking || sourceBooking.day === 0) return;
+        
+        if (state.dragIsCopy) {
+            const copy = JSON.parse(JSON.stringify(sourceBooking));
+            copy.id = generateBookingId();
+            copy.day = 0;
+            state.bookings.push(copy);
+        } else {
+            sourceBooking.day = 0;
+        }
+        
+        await saveToServer('bookings.json', state.bookings);
+        createDayColumns();
+    };
+    
+    [sidebarEl, contentSidebarEl].forEach(el => {
+        if (!el) return;
+        el.addEventListener('dragover', handleSidebarDragOver);
+        el.addEventListener('dragleave', handleSidebarDragLeave);
+        el.addEventListener('drop', handleSidebarDrop);
+    });
     
     // Collapse bookings and clear selection when clicking outside
     document.addEventListener('click', (e) => {
@@ -2697,6 +3039,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // DEL key deletes expanded/selected bookings
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+            // Close context menu first if open
+            const ctxMenu = document.querySelector('.context-menu');
+            if (ctxMenu) {
+                closeContextMenu();
+                return;
+            }
+            
             // Close print popup first if visible
             const printPopup = document.getElementById('printPopup');
             if (printPopup && printPopup.classList.contains('visible')) {
@@ -2714,6 +3063,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { el: document.getElementById('loginModal'), close: closeLoginModal },
                 { el: document.getElementById('bookingModal'), close: closeBookingModal },
                 { el: document.getElementById('viewBookingModal'), close: closeViewBookingModal },
+                { el: document.getElementById('helpModal'), close: closeHelpModal },
                 { el: document.getElementById('icsModal'), close: closeIcsModal },
                 { el: document.getElementById('optionsModal'), close: closeOptionsModal }
             ];
@@ -2765,6 +3115,7 @@ window.closeLoginModal = closeLoginModal;
 window.closeBookingModal = closeBookingModal;
 window.closeViewBookingModal = closeViewBookingModal;
 window.closeIcsModal = closeIcsModal;
+window.closeHelpModal = closeHelpModal;
 window.closeOptionsModal = closeOptionsModal;
 window.saveSettings = saveSettings;
 window.exportBookings = exportBookings;

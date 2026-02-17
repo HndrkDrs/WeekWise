@@ -36,7 +36,29 @@ Alle wichtigen Änderungen an WeekWise werden in dieser Datei dokumentiert.
 - FABs in `.fab-stack` Flex-Container statt feste `bottom`-Positionen. Löst Überlappungsproblem bei konditionaler Sichtbarkeit.
 - Settings erweitert um `icsDayFilter` (Boolean) – steuert ob Tages-Chips im ICS-Modal angezeigt werden.
 - `showStartDateChangeDialog()` – Custom-Modal mit 4 Optionen für Termin-Migration bei Datumsänderung.
-- Installer auf Version 2.3 aktualisiert, inkl. `ical.php`, `calendar.svg` und neuer Settings-Felder.
+- Installer auf Version 2.3 aktualisiert, inkl. `ical.php`, `calendar.svg`, `help.svg` und neuer Settings-Felder.
+
+### UX-Verbesserungen (Februar 2026)
+- **Kontextmenü** – Rechtsklick auf Termine öffnet ein Kontextmenü mit Bearbeiten, Duplizieren, Kategorie wechseln und Löschen. Bei Mehrfachauswahl (Strg+Click) zeigt das Menü Bulk-Aktionen (Kategorie ändern, alle löschen). Kategorie-Submenu mit Farbswatches und Häkchen bei aktueller Kategorie.
+- **Hilfe-Button** – Neuer FAB-Button (?) mit Übersicht aller Tastenkürzel und URL-Parameter.
+- **Shift/Strg + Drag = Kopieren** – Modifier-Taste kann jetzt auch während des Drags gedrückt werden (nicht nur vor Drag-Start). Visueller "+ Kopie"-Indikator am oberen Bildschirmrand.
+- **Scroll-Hinweis** – Bei Event-Ansichten mit horizontalem Scroll erscheint ein Pfeil-Gradient am rechten Rand, der verschwindet wenn man ans Ende scrollt.
+- **Editierbare Standard-Kategorie** – Name und Farbe der Default-Kategorie sind in den Settings änderbar. Die Kategorie kann nicht gelöscht werden.
+- **Kategorie-Zähler** – In den Einstellungen zeigt jede Kategorie ein Badge mit der Anzahl zugeordneter Termine.
+- **Mobile Ablage** – Ablage-Kachel wird nur für eingeloggte Nutzer angezeigt und rendert jetzt auch Termine korrekt.
+- **Drag aus Sidebar** – Termine können jetzt aus der Ablage/Sidebar heraus auf Tages-Spalten gezogen werden.
+- **Drop auf gesamte Sidebar** – Drop in die Ablage funktioniert jetzt auf der gesamten Sidebar-Fläche, nicht nur auf der Überschrift.
+- **Resize → kein Modal** – Nach Resize eines Termins wird kein "Neuer Termin"-Modal mehr versehentlich geöffnet.
+
+### Technisch (Februar 2026)
+- `ensureDefaultCategory()`, `getDefaultCategoryName()`, `buildCategoryOptions()` – Zentralisierte Kategorie-Helfer, keine Hardcoded-Strings mehr.
+- `updateDragGhost(isCopy, bookingIndex)` – Floating-Indikator bei Kopier-Drag.
+- `state.justResized` Flag verhindert falsches Click-Event nach Resize.
+- `showBookingContextMenu()`, `createCtxItem()`, `createCategorySubmenu()`, `positionContextMenu()` – Viewport-aware Context-Menu-System.
+- `duplicateBookingDirect(index)` – Duplizierung ohne Modal-Öffnung.
+- `applyCategoryToBookings(indices, categoryId)` – Bulk-Kategorie-Änderung.
+- ESC-Handler priorisiert: Context-Menu → Print-Popup → Multi-Selection → Modals.
+- Sidebar Drag-Events auf `#contentSidebar` erweitert mit `dragleave`-Schutz.
 
 ---
 
