@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WeekWise 2.1</title>
+    <title>WeekWise 2.3</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="ico/favicon.ico" type="image/x-icon">
 </head>
@@ -23,13 +23,18 @@
         <div class="day-tiles" id="dayTiles"></div>
 
         <!-- Desktop View (headers generated dynamically by app.js) -->
-        <div class="weekdays" id="weekdayHeaders"></div>
-        <div class="day-columns" id="dayColumns"></div>
+        <div class="desktop-scroll-wrapper" id="desktopScrollWrapper">
+            <div class="weekdays" id="weekdayHeaders"></div>
+            <div class="day-columns" id="dayColumns"></div>
+        </div>
     </div>
 
     <!-- Floating Action Buttons (vertical stack, bottom-right) -->
-    <button class="fab fab-top" id="newBookingButton" style="display:none" aria-label="Neuer Termin">
+    <button class="fab fab-extra" id="newBookingButton" style="display:none" aria-label="Neuer Termin">
         <span class="icon add"></span>
+    </button>
+    <button class="fab fab-top" id="icsButton" style="display:none" aria-label="Kalender-Export">
+        <span class="icon calendar"></span>
     </button>
     <button class="fab fab-mid" id="printButton" style="display:none" aria-label="Drucken">
         <span class="icon print"></span>
@@ -212,6 +217,16 @@
             <!-- ── System ── -->
             <div class="settings-section-divider">System</div>
 
+            <div class="form-group" id="icsSettingsSection">
+                <label>Kalender-Export (ICS)</label>
+                <label class="inline-check"><input type="checkbox" id="icsPublicCheckbox"> Öffentlich zugänglich (ohne Login)</label>
+                <div style="margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                    <button type="button" id="icsGenerateTokenBtn" onclick="generateIcsToken()">Neuen Token generieren</button>
+                    <span id="icsTokenDisplay" class="ics-token-info"></span>
+                </div>
+                <div id="icsTokenHint" class="ics-token-info" style="margin-top: 4px;"></div>
+            </div>
+
             <div class="form-group">
                 <label>Export/Import</label>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -231,6 +246,50 @@
                 <button type="button" onclick="saveSettings()">Speichern</button>
                 <button type="button" onclick="logout()" class="danger-button">Ausloggen</button>
                 <button type="button" class="cancel-button" onclick="closeOptionsModal()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ICS Export Modal -->
+    <div class="modal" id="icsModal">
+        <div class="modal-content">
+            <h3>Kalender-Export</h3>
+
+            <div class="ics-section-divider">Filter</div>
+
+            <div class="form-group">
+                <label>Kategorien</label>
+                <div id="icsCategoryChips" class="ics-filter-chips"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Tage</label>
+                <div id="icsDayChips" class="ics-filter-chips"></div>
+            </div>
+
+            <div id="icsCounter" class="ics-counter"></div>
+
+            <div class="ics-section-divider">Download</div>
+
+            <div class="ics-link-row">
+                <input type="text" id="icsDownloadUrl" readonly>
+                <button type="button" id="icsCopyDownloadBtn">Kopieren</button>
+                <button type="button" id="icsDownloadBtn">Download</button>
+            </div>
+
+            <div id="icsAboSection">
+                <div class="ics-section-divider">Abo (Kalender-Abonnement)</div>
+                <div class="ics-link-row">
+                    <input type="text" id="icsAboUrl" readonly>
+                    <button type="button" id="icsCopyAboBtn">Kopieren</button>
+                </div>
+                <div id="icsAboHint" class="ics-token-info">
+                    Diesen Link in Google Calendar, Outlook oder Apple Kalender als Abo-URL einfügen.
+                </div>
+            </div>
+
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                <button type="button" class="cancel-button" onclick="closeIcsModal()">Schließen</button>
             </div>
         </div>
     </div>
