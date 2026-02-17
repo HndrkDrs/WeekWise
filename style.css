@@ -73,6 +73,11 @@
     mask-image: url('ico/print.svg');
 }
 
+.icon.calendar {
+    -webkit-mask-image: url('ico/calendar.svg');
+    mask-image: url('ico/calendar.svg');
+}
+
 /* =====================================================
    Sidebar Styles
    ===================================================== */
@@ -200,12 +205,19 @@ body.readonly .mobile-booking {
     text-align: center;
 }
 
+.desktop-scroll-wrapper {
+    overflow-x: visible;
+}
+
+.desktop-scroll-wrapper.event-scroll {
+    overflow-x: auto;
+}
+
 .weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     background: var(--bg-light);
     border-bottom: 1px solid var(--border-color);
-    overflow-x: auto;
 }
 
 .weekdays.event-scroll {
@@ -221,7 +233,6 @@ body.readonly .mobile-booking {
 .day-columns {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    overflow-x: auto;
 }
 
 /* When event mode has many days, ensure columns don't get too narrow */
@@ -342,6 +353,31 @@ body.readonly .mobile-booking {
     pointer-events: none;
 }
 
+/* Resize Handle */
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    cursor: ns-resize;
+    background: transparent;
+    z-index: 5;
+    border-radius: 0 0 4px 4px;
+    transition: background 0.15s;
+}
+
+.resize-handle:hover,
+.booking.resizing .resize-handle {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.booking.resizing {
+    z-index: 30;
+    box-shadow: 0 4px 16px var(--shadow-hover);
+    transition: none;
+}
+
 .booking-title {
     font-weight: bold;
     margin: 0;
@@ -446,6 +482,7 @@ body.readonly .mobile-booking {
 .fab-bottom { bottom: 30px; }
 .fab-mid    { bottom: 100px; }
 .fab-top    { bottom: 170px; }
+.fab-extra  { bottom: 240px; }
 
 .fab:hover {
     transform: scale(1.1);
@@ -459,7 +496,7 @@ body.readonly .mobile-booking {
 .print-popup {
     position: fixed;
     right: 30px;
-    bottom: 170px;
+    bottom: 240px;
     background: white;
     border-radius: 8px;
     box-shadow: 0 4px 20px var(--shadow);
@@ -665,6 +702,91 @@ body.readonly .mobile-booking {
 #eventStartDate,
 #eventDayCount {
     max-width: 200px;
+}
+
+/* =====================================================
+   ICS Modal
+   ===================================================== */
+
+#icsModal .modal-content {
+    max-width: 520px;
+}
+
+.ics-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.ics-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85em;
+    cursor: pointer;
+    user-select: none;
+    background: var(--bg-light);
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.ics-chip:hover {
+    border-color: var(--primary);
+}
+
+.ics-chip input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.ics-link-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.ics-link-row input[type="text"] {
+    flex: 1;
+    font-family: monospace;
+    font-size: 0.82em;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-light);
+    color: var(--text-dark);
+}
+
+.ics-link-row button {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    font-size: 0.85em;
+}
+
+.ics-counter {
+    font-size: 0.82em;
+    color: var(--text-light);
+    margin: 8px 0 4px;
+}
+
+.ics-section-divider {
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 4px;
+    margin: 14px 0 10px;
+}
+
+.ics-token-info {
+    font-size: 0.82em;
+    color: var(--text-light);
+    margin-top: 4px;
 }
 
 .form-group {
@@ -1090,10 +1212,15 @@ textarea:focus-visible {
         right: 20px;
         bottom: 150px;
     }
+
+    #icsButton {
+        right: 20px;
+        bottom: 215px;
+    }
     
     .print-popup {
         right: 20px;
-        bottom: 220px;
+        bottom: 285px;
     }
     
     .modal-content {
@@ -1192,6 +1319,10 @@ textarea:focus-visible {
     .day-columns {
         display: grid !important;
         overflow-x: visible;
+    }
+
+    .desktop-scroll-wrapper {
+        overflow: visible !important;
     }
     
     .calendar {

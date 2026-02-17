@@ -1,11 +1,12 @@
 /**
- * WeekWise 2.1 - Application JavaScript
+ * WeekWise 2.3 - Application JavaScript
  * 
  * A weekly schedule planner optimized for:
  * - Running on any webspace (HTML, JS, PHP)
  * - Zero maintenance after setup
  * - Flexible embedding via iFrame
  * - Event mode: date-based multi-day schedules
+ * - ICS calendar export and subscription
  */
 
 // =====================================================
@@ -50,7 +51,11 @@ const state = {
     // Drag & drop state
     dragBookingIndex: null,
     dragIsCopy: false,
-    dragGhost: null
+    dragGhost: null,
+    resizing: false,
+    // ICS state
+    icsTokens: [],          // Array of {token, created} – last entry is active
+    icsPublic: false         // Whether ICS export is public (no login needed)
 };
 
 // =====================================================
@@ -178,7 +183,8 @@ function parseUrlParams() {
         hideDays: parsedHide,
         readonly: params.get('readonly') === 'true',
         compact: params.get('compact') === 'true',
-        hideempty: params.get('hideempty') === 'true'
+        hideempty: params.get('hideempty') === 'true',
+        view: params.get('view') || null
     };
     
     // Apply body classes for embedded modes
@@ -294,6 +300,40 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Generate a unique booking ID (UUID v4 via crypto API, fallback to random).
+ * Used to stably identify bookings across edits, drag, ICS export, etc.
+ */
+function generateBookingId() {
+    if (crypto && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    // Fallback for older browsers
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
+/**
+ * Ensure a booking has an id. If missing, assign one.
+ * Returns true if an id was assigned (booking was mutated).
+ */
+function ensureBookingId(booking) {
+    if (!booking.id) {
+        booking.id = generateBookingId();
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Snap minutes to the nearest 15-minute grid.
+ */
+function snapTo15(minutes) {
+    return Math.round(minutes / 15) * 15;
 }
 
 // =====================================================
@@ -678,8 +718,10 @@ function createDayColumns() {
         
         // For many columns (event mode), enable horizontal scroll with min-width per column
         const needsScroll = visibleDays.length > 7;
+        const scrollWrapper = document.getElementById('desktopScrollWrapper');
         weekdaysContainer.classList.toggle('event-scroll', needsScroll);
         container.classList.toggle('event-scroll', needsScroll);
+        if (scrollWrapper) scrollWrapper.classList.toggle('event-scroll', needsScroll);
         if (needsScroll) {
             weekdaysContainer.style.setProperty('--day-count', visibleDays.length);
             container.style.setProperty('--day-count', visibleDays.length);
@@ -714,6 +756,9 @@ function createDayColumns() {
                 if (state.isLoggedIn && e.target.classList.contains('day-column')) {
                     state.selectedDay = day;
                     state.selectedColumn = column;
+                    state.selectedBookingIndex = null;
+                    
+                    document.getElementById('bookingForm').reset();
                     
                     const rect = column.getBoundingClientRect();
                     const clickY = e.clientY - rect.top;
@@ -728,6 +773,22 @@ function createDayColumns() {
                     if (endHourCalc <= endHour) {
                         document.getElementById('bookingEnd').value = formatTime(endHourCalc, minute);
                     }
+                    
+                    // Populate category select
+                    const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+                    const categorySelect = document.getElementById('bookingCategory');
+                    categorySelect.innerHTML = '<option value="default">Standard</option>';
+                    bookingColors.forEach(color => {
+                        const option = document.createElement('option');
+                        option.textContent = color.name;
+                        option.value = color.id;
+                        option.style.color = rgbToHex(color.color);
+                        categorySelect.appendChild(option);
+                    });
+                    
+                    document.getElementById('modalDeleteButton').style.display = 'none';
+                    const dupBtn = document.getElementById('modalDuplicateButton');
+                    if (dupBtn) dupBtn.style.display = 'none';
                     
                     document.getElementById('bookingModal').style.display = 'flex';
                 }
@@ -753,16 +814,34 @@ function createDayColumns() {
                 
                 const targetDay = parseInt(column.dataset.day);
                 const sourceBooking = state.bookings[bookingIndex];
-                if (!sourceBooking || sourceBooking.day === targetDay) return;
+                if (!sourceBooking) return;
+                
+                // Calculate target time from drop position (15-min snap)
+                const rect = column.getBoundingClientRect();
+                const dropY = e.clientY - rect.top;
+                const dropMinutes = snapTo15(dropY);
+                const duration = timeToMinutes(sourceBooking.endTime) - timeToMinutes(sourceBooking.startTime);
+                const newStartMin = Math.max(0, dropMinutes);
+                const maxStart = (endHour - startHour) * 60 - duration;
+                const clampedStart = Math.min(newStartMin, Math.max(0, maxStart));
+                const newStartTotal = clampedStart + startHour * 60;
+                const newEndTotal = newStartTotal + duration;
+                const newStartTime = formatTime(Math.floor(newStartTotal / 60), newStartTotal % 60);
+                const newEndTime = formatTime(Math.floor(newEndTotal / 60), newEndTotal % 60);
                 
                 if (state.dragIsCopy) {
-                    // Shift+Drag: duplicate to target day
+                    // Shift+Drag: duplicate to target day + time
                     const copy = JSON.parse(JSON.stringify(sourceBooking));
+                    copy.id = generateBookingId();
                     copy.day = targetDay;
+                    copy.startTime = newStartTime;
+                    copy.endTime = newEndTime;
                     state.bookings.push(copy);
                 } else {
-                    // Normal drag: move to target day
+                    // Normal drag: move to target day + time
                     sourceBooking.day = targetDay;
+                    sourceBooking.startTime = newStartTime;
+                    sourceBooking.endTime = newEndTime;
                 }
                 
                 await saveToServer('bookings.json', state.bookings);
@@ -834,6 +913,7 @@ function createBookingElement(booking, index, isMobile) {
     const el = document.createElement('div');
     el.className = isMobile ? 'mobile-booking' : 'booking';
     el.dataset.index = index;
+    el.dataset.bookingIndex = index;
     
     const bgColor = sanitizeColor(rgbToHex(booking.color) || booking.color || 'var(--secondary)');
     el.style.backgroundColor = bgColor;
@@ -863,12 +943,19 @@ function createBookingElement(booking, index, isMobile) {
         `;
     }
     
+    // Append resize handle for desktop bookings (admin only)
+    if (!isMobile && state.isLoggedIn && !state.urlParams.readonly && !state.urlParams.embedded) {
+        html += '<div class="resize-handle"></div>';
+    }
+    
     el.innerHTML = html;
     
     // Desktop drag & drop (admin only)
     if (!isMobile && state.isLoggedIn && !state.urlParams.readonly && !state.urlParams.embedded) {
         el.setAttribute('draggable', 'true');
         el.addEventListener('dragstart', (e) => {
+            // Prevent native drag when resizing
+            if (state.resizing) { e.preventDefault(); return; }
             state.dragBookingIndex = index;
             state.dragIsCopy = e.shiftKey;
             el.classList.add('dragging');
@@ -895,6 +982,59 @@ function createBookingElement(booking, index, isMobile) {
             // Remove all drop highlights
             document.querySelectorAll('.day-column').forEach(c => c.classList.remove('drag-over'));
         });
+        
+        // Resize handle – mousedown on bottom edge
+        const resizeHandle = el.querySelector('.resize-handle');
+        if (resizeHandle) {
+            resizeHandle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                el.setAttribute('draggable', 'false');
+                state.resizing = true;
+                
+                const column = el.parentElement;
+                const startHourVal = parseInt(localStorage.getItem('startHour') || CONFIG.DEFAULT_START_HOUR);
+                const endHourVal = parseInt(localStorage.getItem('endHour') || CONFIG.DEFAULT_END_HOUR);
+                const colRect = column.getBoundingClientRect();
+                
+                el.classList.add('resizing');
+                
+                const onMouseMove = (moveE) => {
+                    const relY = moveE.clientY - colRect.top;
+                    const snappedMinutes = snapTo15(relY);
+                    const bookingStartMin = timeToMinutes(booking.startTime) - startHourVal * 60;
+                    const minHeight = 15; // Minimum 15 minutes
+                    const maxMinutes = (endHourVal - startHourVal) * 60;
+                    const newHeight = Math.max(minHeight, Math.min(snappedMinutes - bookingStartMin, maxMinutes - bookingStartMin));
+                    el.style.height = `${newHeight}px`;
+                };
+                
+                const onMouseUp = async () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    el.classList.remove('resizing');
+                    state.resizing = false;
+                    el.setAttribute('draggable', 'true');
+                    
+                    const newHeight = parseInt(el.style.height);
+                    const startHourVal = parseInt(localStorage.getItem('startHour') || CONFIG.DEFAULT_START_HOUR);
+                    const startMin = timeToMinutes(booking.startTime);
+                    const newEndMin = startMin + newHeight - (timeToMinutes(booking.startTime) - startHourVal * 60) + (timeToMinutes(booking.startTime) - startHourVal * 60);
+                    // Simpler: endMinutes = startHour*60 + bookingTopOffset + newHeight
+                    const bookingTopPx = parseInt(el.style.top);
+                    const endTotalMin = startHourVal * 60 + bookingTopPx + newHeight;
+                    const endH = Math.floor(endTotalMin / 60);
+                    const endM = endTotalMin % 60;
+                    
+                    booking.endTime = formatTime(endH, endM);
+                    await saveToServer('bookings.json', state.bookings);
+                    createDayColumns();
+                };
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        }
     }
     
     // Click handler
@@ -912,6 +1052,21 @@ function createBookingElement(booking, index, isMobile) {
             // Multi-select with Ctrl/Cmd key
             if (e.ctrlKey || e.metaKey) {
                 e.stopPropagation();
+                
+                // If there's an expanded booking that isn't yet in the selection, add it first
+                const isMobileView = isMobile;
+                const allBookings = document.querySelectorAll(isMobileView ? '.mobile-booking' : '.booking');
+                allBookings.forEach(b => {
+                    if (b.classList.contains('expanded')) {
+                        const bIndex = parseInt(b.dataset.bookingIndex);
+                        if (!isNaN(bIndex) && !state.selectedBookingIndices.has(bIndex)) {
+                            state.selectedBookingIndices.add(bIndex);
+                            b.classList.add('selected');
+                        }
+                        b.classList.remove('expanded');
+                    }
+                });
+                
                 if (state.selectedBookingIndices.has(index)) {
                     state.selectedBookingIndices.delete(index);
                     el.classList.remove('selected');
@@ -1240,7 +1395,7 @@ async function duplicateBooking(index) {
     if (!source) return;
     
     const copy = JSON.parse(JSON.stringify(source));
-    // Slightly offset title to indicate it's a copy
+    copy.id = generateBookingId();
     state.bookings.push(copy);
     
     await saveToServer('bookings.json', state.bookings);
@@ -1272,6 +1427,7 @@ function login() {
         document.getElementById('editButton').innerHTML = '<span class="icon settings"></span>';
         document.getElementById('newBookingButton').style.display = 'flex';
         document.getElementById('printButton').style.display = 'flex';
+        document.getElementById('icsButton').style.display = 'flex';
         closeLoginModal();
         buildMobileTiles();
         createDayColumns(); // Re-render to show greyed-out hidden days
@@ -1288,6 +1444,7 @@ function logout() {
         document.getElementById('editButton').innerHTML = '<span class="icon edit"></span>';
         document.getElementById('newBookingButton').style.display = 'none';
         document.getElementById('printButton').style.display = 'none';
+        document.getElementById('icsButton').style.display = 'none';
         // Close print popup if open
         document.getElementById('printPopup')?.classList.remove('visible');
         closeOptionsModal();
@@ -1348,6 +1505,11 @@ async function showOptionsModal() {
     // Booking colors
     await updateCategorySelect();
     renderColorOptions();
+    
+    // ICS settings
+    const icsPublicCb = document.getElementById('icsPublicCheckbox');
+    if (icsPublicCb) icsPublicCb.checked = !!state.icsPublic;
+    updateIcsTokenDisplay();
 }
 
 /**
@@ -1570,14 +1732,23 @@ async function saveSettings() {
         loginhash: newLoginhash,
         mode: state.mode,
         eventStartDate: state.eventStartDate,
-        eventDayCount: state.eventDayCount
+        eventDayCount: state.eventDayCount,
+        icsTokens: state.icsTokens || [],
+        icsPublic: document.getElementById('icsPublicCheckbox')?.checked || false
     };
+    
+    // Update state for icsPublic
+    state.icsPublic = configData.icsPublic;
     
     await saveToServer('settings.json', configData);
     await saveToServer('bookings.json', state.bookings);
     
     localStorage.setItem('loginhash', String(newLoginhash));
     localStorage.setItem('bookingColors', JSON.stringify(bookingColors));
+    
+    // Clear password fields after successful save
+    oldPwdInput.value = '';
+    newPwdInput.value = '';
     
     createTimeOptions();
     buildMobileTiles();
@@ -1678,16 +1849,17 @@ function importBookings() {
                 }
             });
             
+            let categoryChoice = null;
             if (missingCategories.size > 0) {
                 const missingList = Array.from(missingCategories.entries())
                     .map(([id, info]) => `  • "${info.name}" (${info.count} Termine)`)
                     .join('\n');
                 
-                const choice = await showImportCategoryDialog(missingList);
+                categoryChoice = await showImportCategoryDialog(missingList);
                 
-                if (choice === 'cancel') return;
+                if (categoryChoice === 'cancel') return;
                 
-                if (choice === 'create') {
+                if (categoryChoice === 'create') {
                     // Auto-create missing categories with default color
                     const defaultColor = getComputedStyle(document.documentElement)
                         .getPropertyValue('--secondary').trim() || '#6c757d';
@@ -1695,7 +1867,7 @@ function importBookings() {
                         localColors.push({ id, name: info.name, color: defaultColor });
                     });
                     localStorage.setItem('bookingColors', JSON.stringify(localColors));
-                } else if (choice === 'remove') {
+                } else if (categoryChoice === 'remove') {
                     // Strip categoryID from bookings with missing categories
                     validBookings.forEach(b => {
                         if (b.categoryID && missingCategories.has(b.categoryID)) {
@@ -1713,14 +1885,21 @@ function importBookings() {
             if (importMode === 'overwrite') {
                 state.bookings.length = 0;
             }
+            // Always assign fresh IDs on import (foreign data may have incompatible IDs)
+            validBookings.forEach(b => { b.id = generateBookingId(); });
             state.bookings.push(...validBookings);
             
             await saveToServer('bookings.json', state.bookings);
             
-            // If categories were created, save full settings
-            if (missingCategories.size > 0) {
-                const configData = buildFullConfigData();
-                await saveToServer('settings.json', configData);
+            // If categories were created, save full settings to persist them
+            if (categoryChoice === 'create') {
+                try {
+                    const configData = buildFullConfigData();
+                    await saveToServer('settings.json', configData);
+                } catch (settingsError) {
+                    console.error('Failed to save new categories to settings:', settingsError);
+                    alert('Termine wurden importiert, aber die neuen Kategorien konnten nicht gespeichert werden. Bitte Einstellungen manuell speichern.');
+                }
             }
             
             buildMobileTiles();
@@ -1808,7 +1987,9 @@ function buildFullConfigData() {
         loginhash: Number(localStorage.getItem('loginhash')) || CONFIG.DEFAULT_HASH,
         mode: state.mode,
         eventStartDate: state.eventStartDate,
-        eventDayCount: state.eventDayCount
+        eventDayCount: state.eventDayCount,
+        icsTokens: state.icsTokens || [],
+        icsPublic: !!state.icsPublic
     };
 }
 
@@ -1833,6 +2014,8 @@ function initializeDefaults() {
     state.mode = 'week';
     state.eventStartDate = null;
     state.eventDayCount = 3;
+    state.icsTokens = [];
+    state.icsPublic = false;
     createTimeOptions();
     buildMobileTiles();
     createDayColumns();
@@ -1863,6 +2046,10 @@ async function initialize() {
             state.eventStartDate = config.eventStartDate || null;
             state.eventDayCount = config.eventDayCount || 3;
             
+            // ICS settings
+            state.icsTokens = Array.isArray(config.icsTokens) ? config.icsTokens : [];
+            state.icsPublic = !!config.icsPublic;
+            
             // Migrate hiddenDays from string format to numeric if needed
             const rawHidden = config.hiddenDays || [];
             const migratedHidden = migrateHiddenDays(rawHidden);
@@ -1883,6 +2070,10 @@ async function initialize() {
                         migrated = true;
                     }
                 }
+                // Assign IDs to bookings that don't have one yet
+                if (ensureBookingId(b)) {
+                    migrated = true;
+                }
                 return b;
             });
             
@@ -1890,7 +2081,7 @@ async function initialize() {
             if (migrated) {
                 try {
                     await saveToServer('bookings.json', state.bookings);
-                    console.log('Bookings migrated to numeric day format');
+                    console.log('Bookings migrated (day format / IDs)');
                 } catch (e) {
                     console.warn('Could not save migrated bookings:', e);
                 }
@@ -1917,6 +2108,257 @@ async function initialize() {
     if (state.sidebarOpen) {
         toggleSidebar();
     }
+    
+    // Show ICS button for public users if icsPublic is enabled
+    if (state.icsPublic && !state.urlParams.readonly && !state.urlParams.embedded) {
+        document.getElementById('icsButton').style.display = 'flex';
+    }
+    
+    // ?view=ics embedded mode: show only the ICS modal
+    if (state.urlParams.view === 'ics' && state.urlParams.embedded) {
+        // Hide everything except the modal
+        document.getElementById('main').style.display = 'none';
+        document.getElementById('sidebar')?.style.setProperty('display', 'none', 'important');
+        showIcsModal();
+    }
+}
+
+// =====================================================
+// ICS Calendar Export
+// =====================================================
+
+/**
+ * Generate a random 6-character alphanumeric token.
+ */
+function generateToken() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+/**
+ * Generate a new ICS token and append to icsTokens array.
+ * Saves settings immediately.
+ */
+async function generateIcsToken() {
+    if (!confirm('Neuen Token generieren?\nBestehende Kalender-Abonnements mit dem alten Token werden ungültig.')) return;
+    
+    const token = generateToken();
+    const entry = { token, created: new Date().toISOString() };
+    
+    if (!Array.isArray(state.icsTokens)) state.icsTokens = [];
+    state.icsTokens.push(entry);
+    
+    // Save immediately
+    const configData = buildFullConfigData();
+    await saveToServer('settings.json', configData);
+    
+    updateIcsTokenDisplay();
+}
+
+/**
+ * Update the ICS token display in the settings modal.
+ */
+function updateIcsTokenDisplay() {
+    const display = document.getElementById('icsTokenDisplay');
+    const hint = document.getElementById('icsTokenHint');
+    if (!display || !hint) return;
+    
+    if (!Array.isArray(state.icsTokens) || state.icsTokens.length === 0) {
+        display.textContent = 'Kein Token vorhanden';
+        hint.textContent = 'Ein Token wird für Kalender-Abonnements benötigt.';
+    } else {
+        const active = state.icsTokens[state.icsTokens.length - 1];
+        const created = new Date(active.created);
+        const dateStr = created.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeStr = created.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        display.textContent = `Aktiver Token: ${active.token}`;
+        hint.textContent = `Generiert am ${dateStr} um ${timeStr} Uhr` +
+            (state.icsTokens.length > 1 ? ` (${state.icsTokens.length} Token im Verlauf)` : '');
+    }
+}
+
+/**
+ * Build the base URL for ical.php requests.
+ */
+function getIcsBaseUrl() {
+    const loc = window.location;
+    const path = loc.pathname.replace(/\/[^/]*$/, '/');
+    return `${loc.protocol}//${loc.host}${path}ical.php`;
+}
+
+/**
+ * Count how many bookings match the current ICS modal filters.
+ */
+function countFilteredIcsBookings() {
+    const categoryChecks = document.querySelectorAll('#icsCategoryChips input[type="checkbox"]');
+    const dayChecks = document.querySelectorAll('#icsDayChips input[type="checkbox"]');
+    
+    const selectedCategories = new Set();
+    categoryChecks.forEach(cb => { if (cb.checked) selectedCategories.add(cb.value); });
+    const allCategoriesSelected = selectedCategories.size === categoryChecks.length;
+    
+    const selectedDays = new Set();
+    dayChecks.forEach(cb => { if (cb.checked) selectedDays.add(parseInt(cb.value)); });
+    const allDaysSelected = selectedDays.size === dayChecks.length;
+    
+    return state.bookings.filter(b => {
+        if (b.day === 0) return false; // skip Ablage
+        if (!allDaysSelected && !selectedDays.has(b.day)) return false;
+        if (!allCategoriesSelected) {
+            const catId = b.categoryID || 'default';
+            if (!selectedCategories.has(catId)) return false;
+        }
+        return true;
+    }).length;
+}
+
+/**
+ * Build the ICS download/abo URL based on current filter selections.
+ */
+function buildIcsUrls() {
+    const base = getIcsBaseUrl();
+    const params = new URLSearchParams();
+    
+    // Category filter
+    const categoryChecks = document.querySelectorAll('#icsCategoryChips input[type="checkbox"]');
+    const allCats = [];
+    const selectedCats = [];
+    categoryChecks.forEach(cb => {
+        allCats.push(cb.value);
+        if (cb.checked) selectedCats.push(cb.dataset.name);
+    });
+    if (selectedCats.length > 0 && selectedCats.length < allCats.length) {
+        params.set('category', selectedCats[0]); // ICS endpoint supports single category
+    }
+    
+    // Day filter
+    const dayChecks = document.querySelectorAll('#icsDayChips input[type="checkbox"]');
+    const allDays = [];
+    const selectedDays = [];
+    const deselectedDays = [];
+    dayChecks.forEach(cb => {
+        const dayNum = parseInt(cb.value);
+        allDays.push(dayNum);
+        if (cb.checked) selectedDays.push(dayNum);
+        else deselectedDays.push(dayNum);
+    });
+    
+    if (selectedDays.length < allDays.length) {
+        if (selectedDays.length <= deselectedDays.length) {
+            params.set('day', selectedDays.join(','));
+        } else {
+            params.set('hide', deselectedDays.join(','));
+        }
+    }
+    
+    // Download URL (always HTTPS)
+    const downloadParams = new URLSearchParams(params);
+    downloadParams.set('download', 'true');
+    const downloadUrl = base + '?' + downloadParams.toString();
+    
+    // Abo URL (webcal:// for event mode with token)
+    let aboUrl = '';
+    if (state.mode === 'event' && Array.isArray(state.icsTokens) && state.icsTokens.length > 0) {
+        const activeToken = state.icsTokens[state.icsTokens.length - 1].token;
+        const aboParams = new URLSearchParams(params);
+        aboParams.set('token', activeToken);
+        const httpsUrl = base + '?' + aboParams.toString();
+        aboUrl = httpsUrl.replace(/^https?:/, 'webcal:');
+    }
+    
+    return { downloadUrl, aboUrl };
+}
+
+/**
+ * Update ICS modal URLs and counter when filters change.
+ */
+function updateIcsModal() {
+    const count = countFilteredIcsBookings();
+    const counter = document.getElementById('icsCounter');
+    if (counter) counter.textContent = `${count} Termin${count !== 1 ? 'e' : ''} ausgewählt`;
+    
+    const { downloadUrl, aboUrl } = buildIcsUrls();
+    
+    const downloadInput = document.getElementById('icsDownloadUrl');
+    if (downloadInput) downloadInput.value = downloadUrl;
+    
+    const aboInput = document.getElementById('icsAboUrl');
+    if (aboInput) aboInput.value = aboUrl;
+    
+    // Show/hide abo section (only in event mode with token)
+    const aboSection = document.getElementById('icsAboSection');
+    if (aboSection) {
+        const hasToken = Array.isArray(state.icsTokens) && state.icsTokens.length > 0;
+        aboSection.style.display = (state.mode === 'event' && hasToken) ? '' : 'none';
+    }
+}
+
+/**
+ * Show the ICS export modal.
+ */
+function showIcsModal() {
+    const modal = document.getElementById('icsModal');
+    if (!modal) return;
+    
+    // Build category chips
+    const catContainer = document.getElementById('icsCategoryChips');
+    catContainer.innerHTML = '';
+    const bookingColors = JSON.parse(localStorage.getItem('bookingColors') || '[]');
+    
+    // Default category
+    const defaultChip = document.createElement('label');
+    defaultChip.className = 'ics-chip';
+    const defaultCb = document.createElement('input');
+    defaultCb.type = 'checkbox';
+    defaultCb.value = 'default';
+    defaultCb.dataset.name = '';
+    defaultCb.checked = true;
+    defaultCb.addEventListener('change', updateIcsModal);
+    defaultChip.appendChild(defaultCb);
+    defaultChip.appendChild(document.createTextNode('Standard'));
+    catContainer.appendChild(defaultChip);
+    
+    bookingColors.forEach(c => {
+        const chip = document.createElement('label');
+        chip.className = 'ics-chip';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = c.id;
+        cb.dataset.name = c.name;
+        cb.checked = true;
+        cb.addEventListener('change', updateIcsModal);
+        chip.appendChild(cb);
+        chip.appendChild(document.createTextNode(c.name));
+        catContainer.appendChild(chip);
+    });
+    
+    // Build day chips
+    const dayContainer = document.getElementById('icsDayChips');
+    dayContainer.innerHTML = '';
+    const count = getDayCount();
+    for (let i = 1; i <= count; i++) {
+        const chip = document.createElement('label');
+        chip.className = 'ics-chip';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = i;
+        cb.checked = true;
+        cb.addEventListener('change', updateIcsModal);
+        chip.appendChild(cb);
+        chip.appendChild(document.createTextNode(getDayLabel(i)));
+        dayContainer.appendChild(chip);
+    }
+    
+    updateIcsModal();
+    modal.style.display = 'flex';
+}
+
+function closeIcsModal() {
+    document.getElementById('icsModal').style.display = 'none';
 }
 
 // =====================================================
@@ -1941,6 +2383,39 @@ document.addEventListener('DOMContentLoaded', () => {
         togglePrintPopup();
     });
     
+    // ICS button
+    document.getElementById('icsButton')?.addEventListener('click', () => {
+        showIcsModal();
+    });
+    
+    // ICS modal buttons
+    document.getElementById('icsCopyDownloadBtn')?.addEventListener('click', () => {
+        const input = document.getElementById('icsDownloadUrl');
+        if (input) {
+            navigator.clipboard.writeText(input.value).then(() => {
+                const btn = document.getElementById('icsCopyDownloadBtn');
+                btn.textContent = '✓';
+                setTimeout(() => { btn.textContent = 'Kopieren'; }, 1500);
+            });
+        }
+    });
+    
+    document.getElementById('icsDownloadBtn')?.addEventListener('click', () => {
+        const url = document.getElementById('icsDownloadUrl')?.value;
+        if (url) window.open(url, '_blank');
+    });
+    
+    document.getElementById('icsCopyAboBtn')?.addEventListener('click', () => {
+        const input = document.getElementById('icsAboUrl');
+        if (input) {
+            navigator.clipboard.writeText(input.value).then(() => {
+                const btn = document.getElementById('icsCopyAboBtn');
+                btn.textContent = '✓';
+                setTimeout(() => { btn.textContent = 'Kopieren'; }, 1500);
+            });
+        }
+    });
+    
     // Close print popup on outside click
     document.addEventListener('click', (e) => {
         const popup = document.getElementById('printPopup');
@@ -1954,6 +2429,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // New booking button
     document.getElementById('newBookingButton')?.addEventListener('click', () => {
         if (state.isLoggedIn) {
+            state.selectedBookingIndex = null;
+            
             // Reset form
             document.getElementById('bookingForm').reset();
             buildDaySelect();
@@ -1969,10 +2446,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const option = document.createElement('option');
                 option.textContent = color.name;
                 option.value = color.id;
+                option.style.color = rgbToHex(color.color);
                 categorySelect.appendChild(option);
             });
             
             document.getElementById('modalDeleteButton').style.display = 'none';
+            const dupBtn = document.getElementById('modalDuplicateButton');
+            if (dupBtn) dupBtn.style.display = 'none';
             document.getElementById('bookingModal').style.display = 'flex';
         }
     });
@@ -2008,8 +2488,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (state.selectedBookingIndex !== null) {
+            // Preserve existing id on edit
+            newBooking.id = state.bookings[state.selectedBookingIndex].id || generateBookingId();
             state.bookings[state.selectedBookingIndex] = newBooking;
         } else {
+            newBooking.id = generateBookingId();
             state.bookings.push(newBooking);
         }
         
@@ -2081,6 +2564,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (state.dragIsCopy) {
                 const copy = JSON.parse(JSON.stringify(sourceBooking));
+                copy.id = generateBookingId();
                 copy.day = 0;
                 state.bookings.push(copy);
             } else {
@@ -2137,6 +2621,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { el: document.getElementById('loginModal'), close: closeLoginModal },
                 { el: document.getElementById('bookingModal'), close: closeBookingModal },
                 { el: document.getElementById('viewBookingModal'), close: closeViewBookingModal },
+                { el: document.getElementById('icsModal'), close: closeIcsModal },
                 { el: document.getElementById('optionsModal'), close: closeOptionsModal }
             ];
             for (const modal of modals) {
@@ -2186,6 +2671,7 @@ window.logout = logout;
 window.closeLoginModal = closeLoginModal;
 window.closeBookingModal = closeBookingModal;
 window.closeViewBookingModal = closeViewBookingModal;
+window.closeIcsModal = closeIcsModal;
 window.closeOptionsModal = closeOptionsModal;
 window.saveSettings = saveSettings;
 window.exportBookings = exportBookings;
@@ -2194,3 +2680,4 @@ window.togglePrintPopup = togglePrintPopup;
 window.updateModeUI = updateModeUI;
 window.updateEventPreview = updateEventPreview;
 window.duplicateBooking = duplicateBooking;
+window.generateIcsToken = generateIcsToken;

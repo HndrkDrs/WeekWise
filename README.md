@@ -2,24 +2,19 @@
 
 WeekWise ist ein benutzerfreundliches Tool zur Erstellung und Verwaltung von Wochenplänen. Es ermöglicht eine individuelle Anpassung von Farben und Kategorien direkt im UI und kann fast ohne Programmierkenntnisse genutzt werden.
 
-## 🆕 Version 2.1
+## 🆕 Version 2.3
 
 ### Neue Features
-- **Druckansicht** – Druckt den Plan als A4 Landscape (z.B. zum Aushängen). Optionen: mit/ohne Header, mit/ohne Farben, nach Kategorie gefiltert
-- **Tage ausblenden** – Wochentage können in den Einstellungen global ausgeblendet werden (z.B. Wochenende)
-- **Leere Tage ausblenden** – Tage ohne Termine können automatisch ausgeblendet werden (Setting + URL-Parameter)
-- **Flexibler Day-Parser** – URL-Parameter akzeptieren verschiedene Formate: `Montag`, `Mo`, `monday`, `1` etc.
-- **Mehrere Tage filtern** – `?day=Mo,Mi,Fr` zeigt nur diese Tage, `?hide=Sa,So` blendet Tage aus
-- **Admin-Ansicht** – Ausgeblendete Tage werden für eingeloggte Admins grau/gestreift statt unsichtbar dargestellt
-- **Keyboard-Navigation** – Alle Modals mit Escape schließbar, Focus-Visible-Styles für Tastaturnutzer
-- **Verbesserte Sicherheit** – XSS-Schutz für Farbwerte, robuster Passwort-Hash-Vergleich
+- **ICS-Kalender-Export** – Termine als ICS-Datei herunterladen oder als Abo-URL (webcal://) in Kalender-Apps abonnieren.
+- **Token-basiertes Abo** – Im Event-Modus werden Abo-Links über generierbare Tokens gesteuert. Token-Verlauf in settings.json.
+- **Öffentlicher ICS-Zugang** – Export kann für nicht eingeloggte Nutzer freigeschaltet werden.
+- **Filter im Export** – Kategorie- und Tages-Chips zum selektiven Export.
+- **Embedded ICS-Modal** – `?embedded=true&view=ics` zeigt nur den Export-Dialog.
+- **Persistente Booking-IDs** – Jedes Booking erhält eine UUID für stabile Identifikation (ICS, Sync).
+- **Drag & Drop auf Uhrzeit** – Termine können auf eine andere Uhrzeit gezogen werden (15-Min-Raster).
+- **Resize-Handle** – Dauer eines Termins per Ziehen am unteren Rand ändern.
 
-### Bugfixes (gegenüber 2.0)
-- Hash-Vergleich bei Login konnte unter bestimmten Umständen fehlschlagen
-- Passwort-Änderung wurde in localStorage geschrieben bevor der Server-Save erfolgreich war
-- Endzeit konnte vor Startzeit liegen → kaputte Darstellung
-- FAB-Buttons überlappten sich auf Desktop
-- CSS-Transitions verursachten unnötige Layout-Reflows
+> Vollständiges Changelog: [CHANGELOG.md](CHANGELOG.md)
 
 ## Version 2.0
 
@@ -46,6 +41,7 @@ WeekWise ist ein benutzerfreundliches Tool zur Erstellung und Verwaltung von Woc
 - **Ablage:** Termine können "geparkt" werden und sind nur für Admins sichtbar
 - **Drucken:** Plan als A4 Landscape drucken, mit wählbaren Optionen
 - **Tage ein-/ausblenden:** Wochentage und leere Tage können ausgeblendet werden
+- **Kalender-Export:** ICS-Download und Abo-URLs (webcal://) für Kalender-Integration
 
 ## Installation
 
@@ -64,7 +60,12 @@ Das Repository ist so strukturiert, dass es direkt geklont und verwendet werden 
      "bookingColors": [],
      "hiddenDays": [],
      "hideEmptyDays": false,
-     "loginhash": 108819879
+     "loginhash": 108819879,
+     "mode": "week",
+     "eventStartDate": null,
+     "eventDayCount": 3,
+     "icsTokens": [],
+     "icsPublic": false
    }
    ```
 3. Fertig! Das Standard-Passwort ist `123ChangeMe!` - bitte nach dem ersten Login ändern.
@@ -72,7 +73,7 @@ Das Repository ist so strukturiert, dass es direkt geklont und verwendet werden 
 > **Hinweis:** Die Ordner `_archive/` (alte Versionen) und Entwicklungsdateien werden bei `git archive` automatisch ausgeschlossen.
 
 ### Option 2: Installer
-1. Datei `_archive/installer/2.0/install.php` auf den Webspace hochladen
+1. Datei `_archive/installer/2.3/install.php` auf den Webspace hochladen
 2. `install.php` im Browser öffnen
 3. Admin-Passwort festlegen
 4. Fertig!
@@ -90,6 +91,7 @@ Alle Parameter können beliebig kombiniert werden.
 | `day=...` | Zeigt nur bestimmte Tage (positiver Filter) | `?day=Mo,Mi,Fr` |
 | `hide=...` | Blendet bestimmte Tage aus (negativer Filter) | `?hide=Sa,So` |
 | `hideempty=true` | Blendet Tage ohne Termine aus | `?hideempty=true` |
+| `view=ics` | Zeigt nur den ICS-Export-Dialog (mit `embedded=true`) | `?embedded=true&view=ics` |
 
 **Flexible Tag-Eingabe:** Die Parameter `day` und `hide` akzeptieren verschiedene Formate – kommagetrennt, in beliebiger Kombination:
 - Deutsch: `Montag`, `Mo`
@@ -135,8 +137,10 @@ WeekWise/                    # Direkt einsatzbereit nach Git Clone
 ├── style.css                # Alle Styles
 ├── app.js                   # JavaScript
 ├── save_json.php            # Server-API
+├── ical.php                 # ICS-Kalender-Endpoint
 ├── ico/                     # SVG Icons
 ├── README.md
+├── CHANGELOG.md             # Versionshistorie
 ├── .gitignore               # Ignoriert settings.json, bookings.json
 ├── .gitattributes           # Schließt _archive/ beim Export aus
 └── _archive/                # Alte Versionen & Installer (nicht für Produktion)
@@ -154,20 +158,11 @@ Beiträge zur Weiterentwicklung von WeekWise sind willkommen!
 - Feedback zur Usability
 
 ## Known Bugs & ToDo
-- Neu erstellte Termine können nicht direkt einer Kategorie zugeordnet werden. Erst speichern, dann bearbeiten und zuweisen.
-- Die Passwort-Felder werden beim Speichern eines neuen Passworts nicht automatisch geleert. Müssen manuell geleert werden.
-- Version 2.2 (Event-Modus) noch nicht im Changelog
-- Eigener Changelog erstellen um Readme zu entlasten
-- Im Eventmodus scrollen die Daten über den Spalten beim horizontalten scrollen nicht mit (>10 Einträge) sondern kann separat gescrollt werden. Sollte in sync sein. 
-- Beim Drucken funktioniert das skalieren auf Seitenbreite - das automatische skalieren auf Seitenhöhe funktioniert nicht. 
-- Roadmap ist noch ein WIP Dokument der Version 2.0 --> überarbeiten zu echter Roadmap 
-- Ics download und abo im event-Modus ist noch nicht entwickelt und dokumentiert. - Schnittstelle für admin und Enduser nötig oder nur doku?
-- Lizenz hinzufügen
+- Beim Drucken funktioniert das Skalieren auf Seitenbreite – das automatische Skalieren auf Seitenhöhe funktioniert nicht.
 
 ## Lizenz
 
-Dieses Projekt ist für freie und gemeinnützige Nutzung gedacht. 
-Eine formelle Open-Source-Lizenz (z.B. MIT oder GPL) wird noch hinzugefügt.
+Dieses Projekt steht unter der [MIT-Lizenz](LICENSE).
 
 ## Demo
 
