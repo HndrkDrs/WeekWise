@@ -40,12 +40,17 @@ const state = {
     selectedDay: null,
     selectedColumn: null,
     selectedBookingIndex: null,
+    selectedBookingIndices: new Set(),   // Multi-select (Ctrl+Click)
     sidebarOpen: false,
     urlParams: {},
     // Event mode state
     mode: 'week',           // 'week' or 'event'
     eventStartDate: null,   // ISO date string, e.g. '2026-02-13'
-    eventDayCount: 3        // Number of days in event mode
+    eventDayCount: 3,       // Number of days in event mode
+    // Drag & drop state
+    dragBookingIndex: null,
+    dragIsCopy: false,
+    dragGhost: null
 };
 
 // =====================================================
@@ -729,6 +734,42 @@ function createDayColumns() {
             });
         }
         
+        // Drag & drop target (admin only, desktop)
+        if (!state.urlParams.readonly && !state.urlParams.embedded) {
+            column.addEventListener('dragover', (e) => {
+                if (state.dragBookingIndex === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = state.dragIsCopy ? 'copy' : 'move';
+                column.classList.add('drag-over');
+            });
+            column.addEventListener('dragleave', () => {
+                column.classList.remove('drag-over');
+            });
+            column.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                column.classList.remove('drag-over');
+                const bookingIndex = state.dragBookingIndex;
+                if (bookingIndex === null || bookingIndex < 0) return;
+                
+                const targetDay = parseInt(column.dataset.day);
+                const sourceBooking = state.bookings[bookingIndex];
+                if (!sourceBooking || sourceBooking.day === targetDay) return;
+                
+                if (state.dragIsCopy) {
+                    // Shift+Drag: duplicate to target day
+                    const copy = JSON.parse(JSON.stringify(sourceBooking));
+                    copy.day = targetDay;
+                    state.bookings.push(copy);
+                } else {
+                    // Normal drag: move to target day
+                    sourceBooking.day = targetDay;
+                }
+                
+                await saveToServer('bookings.json', state.bookings);
+                createDayColumns();
+            });
+        }
+        
         container.appendChild(column);
     });
     
@@ -824,6 +865,38 @@ function createBookingElement(booking, index, isMobile) {
     
     el.innerHTML = html;
     
+    // Desktop drag & drop (admin only)
+    if (!isMobile && state.isLoggedIn && !state.urlParams.readonly && !state.urlParams.embedded) {
+        el.setAttribute('draggable', 'true');
+        el.addEventListener('dragstart', (e) => {
+            state.dragBookingIndex = index;
+            state.dragIsCopy = e.shiftKey;
+            el.classList.add('dragging');
+            e.dataTransfer.effectAllowed = e.shiftKey ? 'copy' : 'move';
+            e.dataTransfer.setData('text/plain', String(index));
+            // Show copy cursor hint
+            if (e.shiftKey) {
+                const ghost = document.createElement('div');
+                ghost.className = 'drag-ghost';
+                ghost.textContent = '+ ' + booking.title;
+                document.body.appendChild(ghost);
+                e.dataTransfer.setDragImage(ghost, 0, 0);
+                state.dragGhost = ghost;
+            }
+        });
+        el.addEventListener('dragend', () => {
+            el.classList.remove('dragging');
+            state.dragBookingIndex = null;
+            state.dragIsCopy = false;
+            if (state.dragGhost) {
+                state.dragGhost.remove();
+                state.dragGhost = null;
+            }
+            // Remove all drop highlights
+            document.querySelectorAll('.day-column').forEach(c => c.classList.remove('drag-over'));
+        });
+    }
+    
     // Click handler
     el.addEventListener('click', (e) => {
         const action = e.target.dataset.action;
@@ -836,6 +909,22 @@ function createBookingElement(booking, index, isMobile) {
         } else if (!state.isLoggedIn && !state.urlParams.readonly) {
             showBookingDetails(booking);
         } else if (state.isLoggedIn) {
+            // Multi-select with Ctrl/Cmd key
+            if (e.ctrlKey || e.metaKey) {
+                e.stopPropagation();
+                if (state.selectedBookingIndices.has(index)) {
+                    state.selectedBookingIndices.delete(index);
+                    el.classList.remove('selected');
+                } else {
+                    state.selectedBookingIndices.add(index);
+                    el.classList.add('selected');
+                }
+                return;
+            }
+            
+            // Clear multi-select on normal click
+            clearMultiSelection();
+            
             // Toggle expanded state
             const allBookings = document.querySelectorAll(isMobile ? '.mobile-booking' : '.booking');
             allBookings.forEach(b => {
@@ -1094,6 +1183,13 @@ function editBooking(index) {
     document.getElementById('modalDeleteButton').style.display = 'inline';
     document.getElementById('modalDeleteButton').onclick = () => deleteBooking(index);
     
+    // Show duplicate button
+    const dupBtn = document.getElementById('modalDuplicateButton');
+    if (dupBtn) {
+        dupBtn.style.display = 'inline';
+        dupBtn.onclick = () => duplicateBooking(index);
+    }
+    
     state.selectedBookingIndex = index;
     document.getElementById('bookingModal').style.display = 'flex';
 }
@@ -1107,10 +1203,58 @@ async function deleteBooking(index) {
     }
 }
 
+/**
+ * Delete all multi-selected bookings (via Ctrl+Click + DEL)
+ */
+async function deleteSelectedBookings() {
+    const indices = Array.from(state.selectedBookingIndices).sort((a, b) => b - a);
+    if (indices.length === 0) return;
+    
+    const count = indices.length;
+    if (!confirm(`${count} Termin${count > 1 ? 'e' : ''} wirklich löschen?`)) return;
+    
+    // Delete in reverse order to preserve indices
+    indices.forEach(i => state.bookings.splice(i, 1));
+    state.selectedBookingIndices.clear();
+    
+    await saveToServer('bookings.json', state.bookings);
+    buildMobileTiles();
+    createDayColumns();
+}
+
+/**
+ * Clear multi-selection styling and state
+ */
+function clearMultiSelection() {
+    state.selectedBookingIndices.clear();
+    document.querySelectorAll('.booking.selected, .mobile-booking.selected').forEach(el => {
+        el.classList.remove('selected');
+    });
+}
+
+/**
+ * Duplicate a booking by index (used from the edit modal)
+ */
+async function duplicateBooking(index) {
+    const source = state.bookings[index];
+    if (!source) return;
+    
+    const copy = JSON.parse(JSON.stringify(source));
+    // Slightly offset title to indicate it's a copy
+    state.bookings.push(copy);
+    
+    await saveToServer('bookings.json', state.bookings);
+    closeBookingModal();
+    buildMobileTiles();
+    createDayColumns();
+}
+
 function closeBookingModal() {
     document.getElementById('bookingModal').style.display = 'none';
     document.getElementById('bookingForm').reset();
     document.getElementById('modalDeleteButton').style.display = 'none';
+    const dupBtn = document.getElementById('modalDuplicateButton');
+    if (dupBtn) dupBtn.style.display = 'none';
     state.selectedBookingIndex = null;
 }
 
@@ -1914,10 +2058,47 @@ document.addEventListener('DOMContentLoaded', () => {
     // Import file handler
     document.getElementById('importFile')?.addEventListener('change', importBookings);
     
-    // Collapse bookings when clicking outside
+    // Sidebar (Ablage) drag & drop target
+    const sidebarEl = document.getElementById('Ablage');
+    if (sidebarEl) {
+        sidebarEl.addEventListener('dragover', (e) => {
+            if (state.dragBookingIndex === null) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = state.dragIsCopy ? 'copy' : 'move';
+            sidebarEl.classList.add('drag-over');
+        });
+        sidebarEl.addEventListener('dragleave', () => {
+            sidebarEl.classList.remove('drag-over');
+        });
+        sidebarEl.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            sidebarEl.classList.remove('drag-over');
+            const bookingIndex = state.dragBookingIndex;
+            if (bookingIndex === null || bookingIndex < 0) return;
+            
+            const sourceBooking = state.bookings[bookingIndex];
+            if (!sourceBooking || sourceBooking.day === 0) return;
+            
+            if (state.dragIsCopy) {
+                const copy = JSON.parse(JSON.stringify(sourceBooking));
+                copy.day = 0;
+                state.bookings.push(copy);
+            } else {
+                sourceBooking.day = 0;
+            }
+            
+            await saveToServer('bookings.json', state.bookings);
+            createDayColumns();
+        });
+    }
+    
+    // Collapse bookings and clear selection when clicking outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.booking') && !e.target.closest('.mobile-booking')) {
             document.querySelectorAll('.booking, .mobile-booking').forEach(b => b.classList.remove('expanded'));
+            if (!e.ctrlKey && !e.metaKey) {
+                clearMultiSelection();
+            }
         }
     });
     
@@ -1936,12 +2117,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Escape key closes any open modal or popup
+    // DEL key deletes expanded/selected bookings
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             // Close print popup first if visible
             const printPopup = document.getElementById('printPopup');
             if (printPopup && printPopup.classList.contains('visible')) {
                 printPopup.classList.remove('visible');
+                return;
+            }
+            
+            // Clear multi-selection first
+            if (state.selectedBookingIndices.size > 0) {
+                clearMultiSelection();
                 return;
             }
             
@@ -1956,6 +2144,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     modal.close();
                     break;
                 }
+            }
+        }
+        
+        // DEL key: delete selected or expanded bookings
+        if (e.key === 'Delete' && state.isLoggedIn && !state.urlParams.readonly) {
+            // Don't trigger if inside an input/modal
+            if (e.target.closest('input, textarea, select, .modal')) return;
+            
+            // Multi-selected bookings
+            if (state.selectedBookingIndices.size > 0) {
+                e.preventDefault();
+                deleteSelectedBookings();
+                return;
+            }
+            
+            // Single expanded booking
+            const expanded = document.querySelector('.booking.expanded, .mobile-booking.expanded');
+            if (expanded) {
+                e.preventDefault();
+                const index = parseInt(expanded.dataset.index);
+                if (!isNaN(index)) deleteBooking(index);
             }
         }
     });
@@ -1984,3 +2193,4 @@ window.executePrint = executePrint;
 window.togglePrintPopup = togglePrintPopup;
 window.updateModeUI = updateModeUI;
 window.updateEventPreview = updateEventPreview;
+window.duplicateBooking = duplicateBooking;
