@@ -2,6 +2,9 @@
 
 WeekWise ist ein benutzerfreundliches Tool zur Erstellung und Verwaltung von Wochenplänen. Es ermöglicht eine individuelle Anpassung von Farben und Kategorien direkt im UI und kann fast ohne Programmierkenntnisse genutzt werden.
 
+<img width="800" height="600" alt="grafik" src="https://github.com/user-attachments/assets/09d71fc1-36df-4db1-a4c4-26d255abb11d" />
+
+
 ## 🆕 Version 2.3
 
 ### Neue Features
