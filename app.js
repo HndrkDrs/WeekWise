@@ -32,7 +32,9 @@ const CONFIG = {
     DEFAULT_START_HOUR: 8,
     DEFAULT_END_HOUR: 22,
     DEFAULT_HASH: -1352366804,
-    ALLOWED_FILENAMES: ['settings.json', 'bookings.json']
+    ALLOWED_FILENAMES: ['settings.json', 'bookings.json'],
+    COLLAPSED_HOUR_HEIGHT: 12,
+    FULL_HOUR_HEIGHT: 60
 };
 
 const state = {
@@ -230,6 +232,7 @@ function parseUrlParams() {
         readonly: params.get('readonly') === 'true',
         compact: params.get('compact') === 'true',
         hideempty: params.get('hideempty') === 'true',
+        collapse: params.get('collapse') === 'true',
         view: params.get('view') || null
     };
     
@@ -679,6 +682,63 @@ function getDaysToShow() {
 }
 
 // =====================================================
+// Empty Hour Collapse (Y-Axis Compression)
+// =====================================================
+
+function shouldCollapseEmpty() {
+    if (state.isLoggedIn) return false;
+    const settingsCollapse = localStorage.getItem('collapseEmptyHours') === 'true';
+    return settingsCollapse || state.urlParams.collapse;
+}
+
+function analyzeEmptyHours(bookings, startHour, endHour) {
+    const dayInfo = getDaysToShow();
+    const visibleDayNums = new Set(
+        dayInfo.filter(d => !d.hidden || state.isLoggedIn).map(d => d.day)
+    );
+    const emptyHours = [];
+    for (let h = startHour; h < endHour; h++) {
+        const hourStart = h * 60;
+        const hourEnd = (h + 1) * 60;
+        let hasBooking = false;
+        for (const booking of bookings) {
+            if (!visibleDayNums.has(booking.day)) continue;
+            const bStart = timeToMinutes(booking.startTime);
+            const bEnd = timeToMinutes(booking.endTime);
+            if (bStart < hourEnd && bEnd > hourStart) { hasBooking = true; break; }
+        }
+        emptyHours.push({ hour: h, empty: !hasBooking });
+    }
+    return emptyHours;
+}
+
+function buildYMapper(emptyHours, startHour) {
+    const collapsedHeight = CONFIG.COLLAPSED_HOUR_HEIGHT;
+    const fullHeight = CONFIG.FULL_HOUR_HEIGHT;
+    const hourOffsets = {};
+    let accumulated = 0;
+    for (let i = 0; i < emptyHours.length; i++) {
+        const h = emptyHours[i].hour;
+        hourOffsets[h] = accumulated;
+        accumulated += emptyHours[i].empty ? collapsedHeight : fullHeight;
+    }
+    const totalHeight = accumulated;
+    return {
+        mapMinuteToPixel(minute) {
+            const absoluteMinute = startHour * 60 + minute;
+            const hour = Math.floor(absoluteMinute / 60);
+            const minuteInHour = absoluteMinute % 60;
+            const info = emptyHours.find(e => e.hour === hour);
+            if (!info) return totalHeight;
+            const hourOffset = hourOffsets[hour] || 0;
+            const hourHeight = info.empty ? collapsedHeight : fullHeight;
+            return hourOffset + (minuteInHour / 60) * hourHeight;
+        },
+        getTotalHeight() { return totalHeight; }
+    };
+}
+
+// =====================================================
 // Dynamic UI Generation
 // =====================================================
 
@@ -770,7 +830,15 @@ function createDayColumns() {
     container.innerHTML = '';
     const startHour = parseInt(localStorage.getItem('startHour') || CONFIG.DEFAULT_START_HOUR);
     const endHour = parseInt(localStorage.getItem('endHour') || CONFIG.DEFAULT_END_HOUR);
-    const totalHeight = (endHour - startHour) * 60;
+    
+    // Build Y-mapper for empty hour collapse
+    let yMapper = null;
+    const useCollapse = shouldCollapseEmpty();
+    if (useCollapse) {
+        const emptyHours = analyzeEmptyHours(state.bookings, startHour, endHour);
+        yMapper = buildYMapper(emptyHours, startHour);
+    }
+    const totalHeight = useCollapse && yMapper ? yMapper.getTotalHeight() : (endHour - startHour) * 60;
     
     const dayInfo = getDaysToShow();
     const visibleDays = dayInfo.filter(d => !d.hidden || state.isLoggedIn);
@@ -827,11 +895,17 @@ function createDayColumns() {
         }
     }
     
+    const emptyHoursCache = useCollapse ? analyzeEmptyHours(state.bookings, startHour, endHour) : null;
+    
     visibleDays.forEach(({ day, label, hidden }) => {
         const column = document.createElement('div');
         column.className = 'day-column' + (hidden ? ' day-column-hidden' : '');
         column.dataset.day = day;
         column.style.height = `${totalHeight}px`;
+        
+        if (useCollapse) {
+            column.classList.add('day-column-collapsed');
+        }
         
         // Time markers
         const timeMarkers = document.createElement('div');
@@ -840,7 +914,21 @@ function createDayColumns() {
         for (let hour = startHour; hour <= endHour; hour++) {
             const marker = document.createElement('div');
             marker.className = 'time-marker';
-            marker.style.top = `${(hour - startHour) * 60}px`;
+            if (useCollapse && yMapper) {
+                let topPx;
+                if (hour === endHour) {
+                    topPx = yMapper.getTotalHeight();
+                } else {
+                    topPx = yMapper.mapMinuteToPixel((hour - startHour) * 60);
+                }
+                marker.style.top = `${topPx}px`;
+                const hourInfo = emptyHoursCache.find(e => e.hour === hour);
+                if (hourInfo && hourInfo.empty) {
+                    marker.classList.add('time-marker-collapsed');
+                }
+            } else {
+                marker.style.top = `${(hour - startHour) * 60}px`;
+            }
             marker.textContent = `${hour}:00`;
             timeMarkers.appendChild(marker);
         }
@@ -1289,6 +1377,15 @@ function renderDesktopBookings(bookings) {
     });
     
     const startHour = parseInt(localStorage.getItem('startHour') || CONFIG.DEFAULT_START_HOUR);
+    const endHour = parseInt(localStorage.getItem('endHour') || CONFIG.DEFAULT_END_HOUR);
+    
+    // Build Y-mapper if collapse is active
+    let yMapper = null;
+    const useCollapse = shouldCollapseEmpty();
+    if (useCollapse) {
+        const emptyHours = analyzeEmptyHours(bookings, startHour, endHour);
+        yMapper = buildYMapper(emptyHours, startHour);
+    }
     
     // Map day numbers to column elements
     const dayColumns = {};
@@ -1312,12 +1409,21 @@ function renderDesktopBookings(bookings) {
         
         const bookingEl = createBookingElement(booking, index, false);
         
-        // Calculate position
+        // Calculate position using Y-mapper if collapse is active
         const [startH, startM] = booking.startTime.split(':').map(Number);
         const [endH, endM] = booking.endTime.split(':').map(Number);
         
-        const top = (startH - startHour) * 60 + startM;
-        const height = (endH - startH) * 60 + (endM - startM);
+        let top, height;
+        if (useCollapse && yMapper) {
+            const startMinutes = (startH - startHour) * 60 + startM;
+            const endMinutes = (endH - startHour) * 60 + endM;
+            top = yMapper.mapMinuteToPixel(startMinutes);
+            const bottomPx = yMapper.mapMinuteToPixel(endMinutes);
+            height = bottomPx - top;
+        } else {
+            top = (startH - startHour) * 60 + startM;
+            height = (endH - startH) * 60 + (endM - startM);
+        }
         
         bookingEl.style.top = `${top}px`;
         bookingEl.style.height = `${height}px`;
@@ -1618,6 +1724,10 @@ async function showOptionsModal() {
     
     // Hide empty days
     document.getElementById('hideEmptyDays').checked = localStorage.getItem('hideEmptyDays') === 'true';
+
+    // Collapse empty hours
+    const collapseCB = document.getElementById('collapseEmptyHours');
+    if (collapseCB) collapseCB.checked = localStorage.getItem('collapseEmptyHours') === 'true';
     
     // Booking colors
     await updateCategorySelect();
@@ -1894,6 +2004,10 @@ async function saveSettings() {
     // Hide empty days
     const hideEmptyDays = document.getElementById('hideEmptyDays').checked;
     localStorage.setItem('hideEmptyDays', String(hideEmptyDays));
+
+    // Collapse empty hours
+    const collapseCB = document.getElementById('collapseEmptyHours');
+    if (collapseCB) localStorage.setItem('collapseEmptyHours', String(collapseCB.checked));
     
     // Booking colors
     const bookingColors = Array.from(document.querySelectorAll('#bookingColors .color-edit')).map(el => ({
@@ -1912,6 +2026,7 @@ async function saveSettings() {
         bookingColors,
         hiddenDays,
         hideEmptyDays,
+        collapseEmptyHours: localStorage.getItem('collapseEmptyHours') === 'true',
         loginhash: newLoginhash,
         mode: state.mode,
         eventStartDate: state.eventStartDate,
@@ -2203,6 +2318,7 @@ function buildFullConfigData() {
         bookingColors: JSON.parse(localStorage.getItem('bookingColors') || '[]'),
         hiddenDays: JSON.parse(localStorage.getItem('hiddenDays') || '[]'),
         hideEmptyDays: localStorage.getItem('hideEmptyDays') === 'true',
+        collapseEmptyHours: localStorage.getItem('collapseEmptyHours') === 'true',
         loginhash: Number(localStorage.getItem('loginhash')) || CONFIG.DEFAULT_HASH,
         mode: state.mode,
         eventStartDate: state.eventStartDate,
@@ -2229,6 +2345,7 @@ function initializeDefaults() {
     localStorage.setItem('loginhash', CONFIG.DEFAULT_HASH);
     localStorage.setItem('hiddenDays', '[]');
     localStorage.setItem('hideEmptyDays', 'false');
+    localStorage.setItem('collapseEmptyHours', 'false');
     document.documentElement.style.setProperty('--header-color', '#2196F3');
     state.bookings.length = 0;
     state.mode = 'week';
@@ -2277,6 +2394,7 @@ async function initialize() {
             const migratedHidden = migrateHiddenDays(rawHidden);
             localStorage.setItem('hiddenDays', JSON.stringify(migratedHidden));
             localStorage.setItem('hideEmptyDays', String(config.hideEmptyDays || false));
+            localStorage.setItem('collapseEmptyHours', String(config.collapseEmptyHours || false));
         } else {
             initializeDefaults();
         }

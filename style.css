@@ -1072,6 +1072,16 @@ textarea:focus-visible {
     pointer-events: none;
 }
 
+.time-marker-collapsed {
+    height: 0;
+    /* opacity: 0.35; */
+    font-size: 0.7em;
+    line-height: 1;
+    border-top: 1px dashed var(--border-color);
+    padding-top: 0;
+    margin-top: -1px;
+}
+
 .time-marker {
     position: absolute;
     width: 100%;

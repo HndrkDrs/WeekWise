@@ -77,7 +77,8 @@ Das Repository ist so strukturiert, dass es direkt geklont und verwendet werden 
      "eventDayCount": 3,
      "icsTokens": [],
      "icsPublic": false,
-     "icsDayFilter": false
+     "icsDayFilter": false,
+     "collapseEmptyHours": false
    }
    ```
 3. Fertig! Das Standard-Passwort ist `123ChangeMe!` - bitte nach dem ersten Login ändern.
@@ -103,6 +104,7 @@ Alle Parameter können beliebig kombiniert werden.
 | `day=...` | Zeigt nur bestimmte Tage (positiver Filter) | `?day=Mo,Mi,Fr` |
 | `hide=...` | Blendet bestimmte Tage aus (negativer Filter) | `?hide=Sa,So` |
 | `hideempty=true` | Blendet Tage ohne Termine aus | `?hideempty=true` |
+| `collapse=true` | Staucht leere Stunden auf 12px Höhe (nicht im Admin-Modus) | `?collapse=true` |
 | `view=ics` | Zeigt nur den ICS-Export-Dialog (mit `embedded=true`) | `?embedded=true&view=ics` |
 
 **Flexible Tag-Eingabe:** Die Parameter `day` und `hide` akzeptieren verschiedene Formate – kommagetrennt, in beliebiger Kombination:
