@@ -326,19 +326,40 @@ function timeToMinutes(timeStr) {
 }
 
 /**
- * Show loading indicator
+ * Show loading indicator with logo
  */
+
+/** Minimum display time in ms (1s default) */
+const LOADING_LOGO_MIN_MS = 2000;
+
+/** Track when showLoading was called to enforce minimum display time */
+let _loadingStartTime = null;
+
+/** Initialize start time per default to the time js is initialized to time startup animation */
+_loadingStartTime = Date.now();
+
 function showLoading() {
     const overlay = document.getElementById('loadingOverlay');
-    if (overlay) overlay.classList.add('active');
+    if (!overlay) return;
+    _loadingStartTime = Date.now();
 }
 
 /**
- * Hide loading indicator
+ * Hide loading indicator.
+ * waits until at least LOADING_LOGO_MIN_MS
+ * has elapsed so the animation is perceptible.
  */
 function hideLoading() {
     const overlay = document.getElementById('loadingOverlay');
-    if (overlay) overlay.classList.remove('active');
+    if (!overlay) return;
+    const hideLogo = localStorage.getItem('hideLoadingLogo') === 'true';
+    const elapsed = _loadingStartTime ? Date.now() - _loadingStartTime : Infinity;
+    const minMs = hideLogo ? 0 : LOADING_LOGO_MIN_MS;
+    const delay = Math.max(0, minMs - elapsed);
+    setTimeout(() => {
+        const el = document.getElementById('loadingOverlay');
+        if (el) el.classList.remove('active');
+    }, delay);
 }
 
 /**
@@ -473,10 +494,90 @@ function executePrint() {
         dayColumnsContainer.style.gridTemplateColumns = printCols;
     }
     
+    // ── Apply empty hour collapse for print (if active) ──
+    const startHour = parseInt(localStorage.getItem('startHour') || CONFIG.DEFAULT_START_HOUR);
+    const endHour = parseInt(localStorage.getItem('endHour') || CONFIG.DEFAULT_END_HOUR);
+    let printYMapper = null;
+    const savedColumnStyles = []; // Array of { column, height }
+    const savedBookingStyles = []; // Array of { el, top, height }
+    
+    const printCollapse = localStorage.getItem('collapseEmptyHours') === 'true' || state.urlParams.collapse;
+    if (printCollapse) {
+        const emptyHours = analyzeEmptyHours(state.bookings, startHour, endHour);
+        printYMapper = buildYMapper(emptyHours, startHour);
+        const collapsedTotal = printYMapper.getTotalHeight();
+        
+        // Apply collapsed heights to day columns
+        document.querySelectorAll('.day-column').forEach(col => {
+            savedColumnStyles.push({ column: col, height: col.style.height });
+            col.style.height = `${collapsedTotal}px`;
+        });
+        
+        // Reposition bookings
+        document.querySelectorAll('.booking').forEach(el => {
+            const idx = parseInt(el.dataset.index);
+            const booking = state.bookings[idx];
+            if (!booking || booking.day === 0) return;
+            
+            const [bStartH, bStartM] = booking.startTime.split(':').map(Number);
+            const [bEndH, bEndM] = booking.endTime.split(':').map(Number);
+            
+            const startMinutes = (bStartH - startHour) * 60 + bStartM;
+            const endMinutes = (bEndH - startHour) * 60 + bEndM;
+            
+            savedBookingStyles.push({
+                el,
+                top: el.style.top,
+                height: el.style.height
+            });
+            
+            const topPx = printYMapper.mapMinuteToPixel(startMinutes);
+            const bottomPx = printYMapper.mapMinuteToPixel(endMinutes);
+            el.style.top = `${topPx}px`;
+            el.style.height = `${bottomPx - topPx}px`;
+        });
+        
+        // Reposition time markers
+        const savedMarkerStyles = [];
+        document.querySelectorAll('.time-marker').forEach(marker => {
+            savedMarkerStyles.push({ marker, top: marker.style.top });
+            const currentTop = parseInt(marker.style.top) || 0;
+            // Determine which hour this marker represents
+            const hour = Math.round(currentTop / 60) + startHour;
+            if (hour <= endHour) {
+                if (hour === endHour) {
+                    marker.style.top = `${collapsedTotal}px`;
+                } else {
+                    marker.style.top = `${printYMapper.mapMinuteToPixel((hour - startHour) * 60)}px`;
+                }
+            }
+        });
+        
+        savedColumnStyles.push({ _markers: savedMarkerStyles });
+    }
+    
     // Close popup before print
     document.getElementById('printPopup').classList.remove('visible');
     
     window.print();
+    
+    // ── Restore original heights after print ──
+    if (printYMapper) {
+        savedColumnStyles.forEach(item => {
+            if (item.column && item.height !== undefined) {
+                item.column.style.height = item.height;
+            }
+            if (item._markers) {
+                item._markers.forEach(m => {
+                    m.marker.style.top = m.top;
+                });
+            }
+        });
+        savedBookingStyles.forEach(item => {
+            item.el.style.top = item.top;
+            item.el.style.height = item.height;
+        });
+    }
     
     // Restore original grid columns
     if (weekdaysContainer) weekdaysContainer.style.gridTemplateColumns = savedWeekdaysCols;
@@ -1733,6 +1834,10 @@ async function showOptionsModal() {
     await updateCategorySelect();
     renderColorOptions();
     
+    // Loading logo toggle
+    const loadingLogoCheckbox = document.getElementById('loadingLogoCheckbox');
+    if (loadingLogoCheckbox) loadingLogoCheckbox.checked = localStorage.getItem('hideLoadingLogo') === 'true';
+
     // ICS settings
     const icsPublicCb = document.getElementById('icsPublicCheckbox');
     if (icsPublicCb) icsPublicCb.checked = !!state.icsPublic;
@@ -2016,6 +2121,12 @@ async function saveSettings() {
         id: el.id
     }));
     
+    // Loading logo toggle
+    const loadingLogoCheckbox = document.getElementById('loadingLogoCheckbox');
+    if (loadingLogoCheckbox) {
+        localStorage.setItem('hideLoadingLogo', String(loadingLogoCheckbox.checked));
+    }
+
     // Save config
     const configData = {
         title: document.querySelector('.calendar-header h2').textContent,
@@ -2164,9 +2275,21 @@ function importBookings() {
                     const defaultColor = getComputedStyle(document.documentElement)
                         .getPropertyValue('--secondary').trim() || '#6c757d';
                     missingCategories.forEach((info, id) => {
-                        localColors.push({ id, name: info.name, color: defaultColor });
+                        // Use the category name from the booking data, fall back to a readable name
+                        const catName = (info.name && info.name.trim()) ? info.name : id;
+                        localColors.push({ id, name: catName, color: defaultColor });
                     });
                     localStorage.setItem('bookingColors', JSON.stringify(localColors));
+
+                    // Refresh category UI immediately (no full reload needed)
+                    const optionsModal = document.getElementById('optionsModal');
+                    if (optionsModal && optionsModal.style.display === 'flex') {
+                        renderColorOptions();
+                    }
+                    const bookingModal = document.getElementById('bookingModal');
+                    if (bookingModal && bookingModal.style.display === 'flex') {
+                        buildCategoryOptions(document.getElementById('bookingCategory'));
+                    }
                 } else if (categoryChoice === 'remove') {
                     // Strip categoryID from bookings with missing categories
                     validBookings.forEach(b => {
@@ -2331,7 +2454,12 @@ function buildFullConfigData() {
 
 function validateBooking(booking) {
     const requiredFields = ['day', 'startTime', 'endTime', 'title'];
-    return requiredFields.every(field => booking[field] && String(booking[field]).trim() !== '');
+    return requiredFields.every(field => {
+        const value = booking[field];
+        // Allow numeric 0 (Ablage) while rejecting undefined, null, empty strings
+        if (typeof value === 'number') return true;
+        return value && String(value).trim() !== '';
+    });
 }
 
 // =====================================================
@@ -2363,7 +2491,7 @@ async function initialize() {
     parseUrlParams();
     
     try {
-        showLoading();
+        // showLoading();
         
         const [config, bookings] = await Promise.all([
             loadFromServer('settings.json'),
@@ -2932,9 +3060,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initialize();
     
     // Edit button
-    document.getElementById('editButton')?.addEventListener('click', () => {
+    document.getElementById('editButton')?.addEventListener('click', (e) => {
+        e.stopPropagation();
         if (!state.isLoggedIn) {
             document.getElementById('loginModal').style.display = 'flex';
+            document.getElementById('password').focus();
         } else {
             showOptionsModal();
         }

@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WeekWise 2.3</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2.3">
     <link rel="icon" href="ico/favicon.ico" type="image/x-icon">
 </head>
 <body>
     <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-overlay active" id="loadingOverlay">
+        <img src="ico/WeekWise_pure.svg" class="loading-logo" alt="WeekWise">
         <div class="loading-spinner"></div>
     </div>
 
@@ -74,7 +75,7 @@
         <div class="modal-content">
             <h3>Login</h3>
             <div class="form-group">
-                <input type="password" id="password" placeholder="Passwort" autocomplete="current-password">
+                <input type="password" id="password" placeholder="Passwort" autocomplete="current-password" autofocus>
             </div>
             <button type="button" onclick="login()">Anmelden</button>
             <button type="button" class="cancel-button" onclick="closeLoginModal()">Abbrechen</button>
@@ -226,6 +227,10 @@
                 <div id="bookingColors"></div>
             </div>
 
+            <div class="form-group">
+                <label class="inline-check"><input type="checkbox" id="loadingLogoCheckbox"> Ladeanimation: Nur Spinner (kein Logo)</label>
+            </div>
+
             <!-- ── System ── -->
             <div class="settings-section-divider">System</div>
 
@@ -372,6 +377,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=2.3"></script>
 </body>
 </html>
