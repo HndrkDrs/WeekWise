@@ -818,6 +818,115 @@ body.readonly .mobile-booking {
     font-size: 0.9em;
 }
 
+/* ── Settings Tabbed Layout ── */
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+.settings-header h3 {
+    margin: 0;
+}
+.logout-header-btn {
+    background: none;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    cursor: pointer;
+    white-space: nowrap;
+    margin: 0;
+}
+.logout-header-btn:hover {
+    background: var(--danger);
+    color: white;
+}
+
+.settings-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 12px;
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-shrink: 0;
+}
+.settings-tab-btn {
+    flex: 1 0 auto;
+    min-width: 100px;
+    padding: 8px 12px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    font-size: 0.9em;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: color 0.2s, border-color 0.2s;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    text-align: center;
+}
+.settings-tab-btn:hover {
+    color: var(--text-dark);
+}
+.settings-tab-btn.active {
+    color: var(--header-color);
+    border-bottom-color: var(--header-color);
+    font-weight: 600;
+}
+
+.settings-tab-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+    padding-bottom: 4px;
+}
+.settings-tab-panel {
+    display: none;
+}
+.settings-tab-panel.active {
+    display: block;
+}
+
+.settings-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+/* Settings: fix height for tab layout */
+#optionsModal .modal-content {
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+@media (max-width: 500px) {
+    .settings-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .logout-header-btn {
+        width: 100%;
+    }
+    .settings-tab-btn {
+        font-size: 0.8em;
+        padding: 8px 8px;
+        min-width: 80px;
+    }
+}
+
 /* Settings Section Dividers */
 .settings-section-divider {
     font-size: 0.7em;
@@ -862,9 +971,27 @@ body.readonly .mobile-booking {
 }
 
 /* Event Mode Date/Count Inputs */
+.event-date-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.event-date-field {
+    flex: 1;
+    min-width: 120px;
+}
+.event-date-field input {
+    width: 100%;
+}
+.event-date-sep {
+    color: var(--text-light);
+    font-size: 0.95em;
+    flex-shrink: 0;
+}
 #eventStartDate,
 #eventDayCount {
-    max-width: 200px;
+    max-width: none;
 }
 
 /* =====================================================

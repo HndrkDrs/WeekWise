@@ -36,7 +36,7 @@ export function buildIcsUrls(categoryChecks, dayChecks) {
     const params = new URLSearchParams();
     const state = getState();
 
-    // Category filter
+    // Category filter (supports comma-separated list in ical.php)
     const allCats = [];
     const selectedCats = [];
     if (categoryChecks) {
@@ -46,7 +46,7 @@ export function buildIcsUrls(categoryChecks, dayChecks) {
         });
     }
     if (selectedCats.length > 0 && selectedCats.length < allCats.length) {
-        params.set('category', selectedCats[0]);
+        params.set('category', selectedCats.join(','));
     }
 
     // Day filter
@@ -75,9 +75,9 @@ export function buildIcsUrls(categoryChecks, dayChecks) {
     downloadParams.set('download', 'true');
     const downloadUrl = base + '?' + downloadParams.toString();
 
-    // Abo URL (webcal:// for event mode with token)
+    // Abo URL (webcal:// for any mode with a valid token, only if abo is enabled)
     let aboUrl = '';
-    if (state.mode === 'event' && Array.isArray(state.icsTokens) && state.icsTokens.length > 0) {
+    if (state.icsAboEnabled && Array.isArray(state.icsTokens) && state.icsTokens.length > 0) {
         const activeToken = state.icsTokens[state.icsTokens.length - 1].token;
         const aboParams = new URLSearchParams(params);
         aboParams.set('token', activeToken);

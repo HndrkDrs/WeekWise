@@ -3,7 +3,7 @@
  * Extracted from app.js – validation, overlap detection, category management.
  */
 
-import { timeToMinutes } from '../core/utils.js';
+import { timeToMinutes, rgbToHex } from '../core/utils.js';
 import { getBookingColors, setBookingColors } from '../core/persist.js';
 
 /**
@@ -96,7 +96,7 @@ export function buildCategoryOptions(selectEl) {
         option.value = color.id;
         option.textContent = color.name;
         if (color.id !== 'default') {
-            option.style.color = color.color; // Use rgbToHex from utils if needed
+            option.style.color = rgbToHex(color.color);
         }
         selectEl.appendChild(option);
     });

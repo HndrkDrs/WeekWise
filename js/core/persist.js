@@ -73,13 +73,6 @@ export function getLoginHash() {
 }
 export function setLoginHash(hash) { _set('loginhash', hash); }
 
-// ── Loading Logo Toggle ───────────────────────────────
-
-export function getHideLoadingLogo() {
-    return _get('hideLoadingLogo', 'false') === 'true';
-}
-export function setHideLoadingLogo(value) { _set('hideLoadingLogo', value); }
-
 // ── Header Color ──────────────────────────────────────
 
 export function getHeaderColor() {

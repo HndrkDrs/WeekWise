@@ -35,7 +35,8 @@ export function buildFullConfigData() {
         eventDayCount: state.eventDayCount,
         icsTokens: state.icsTokens || [],
         icsPublic: !!state.icsPublic,
-        icsDayFilter: !!state.icsDayFilter
+        icsDayFilter: !!state.icsDayFilter,
+        icsAboEnabled: !!state.icsAboEnabled
     };
 }
 
@@ -113,10 +114,6 @@ export function renderColorOptions(containerEl) {
  * Initialize default settings in localStorage.
  */
 export function initializeDefaults() {
-    const { setStartHour, setEndHour, setHiddenDays, setHideEmptyHours,
-            setCollapseEmptyHours, setLoginHash, setBookingColors,
-            setHideLoadingLogo } = await import('../core/persist.js');
-    // This would be called synchronously from the init flow
     localStorage.setItem('startHour', String(CONFIG.DEFAULT_START_HOUR));
     localStorage.setItem('endHour', String(CONFIG.DEFAULT_END_HOUR));
     localStorage.setItem('bookingColors', '[]');
@@ -124,4 +121,5 @@ export function initializeDefaults() {
     localStorage.setItem('hiddenDays', '[]');
     localStorage.setItem('hideEmptyDays', 'false');
     localStorage.setItem('collapseEmptyHours', 'false');
+    localStorage.setItem('hideLoadingLogo', 'false');
 }

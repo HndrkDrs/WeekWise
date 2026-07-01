@@ -30,7 +30,8 @@ const _state = {
     // ICS state
     icsTokens: [],          // Array of {token, created} – last entry is active
     icsPublic: false,        // Whether ICS export is public (no login needed)
-    icsDayFilter: false      // Whether users can filter by day in ICS modal
+    icsDayFilter: false,     // Whether users can filter by day in ICS modal
+    icsAboEnabled: false      // Whether subscription (webcal abo) feature is enabled
 };
 
 /** Internal loading start timestamp */

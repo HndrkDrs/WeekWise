@@ -113,7 +113,14 @@ if ($token === '' && !$icsPublic) {
 
 // ── Parse filter parameters ──────────────────────────
 
-$categoryFilter = isset($_GET['category']) ? strtolower(trim($_GET['category'])) : '';
+$categoryFilterRaw = isset($_GET['category']) ? trim($_GET['category']) : '';
+$categoryFilters = [];
+if ($categoryFilterRaw !== '') {
+    foreach (explode(',', $categoryFilterRaw) as $c) {
+        $c = strtolower(trim($c));
+        if ($c !== '') $categoryFilters[] = $c;
+    }
+}
 $dayParam = isset($_GET['day']) ? trim($_GET['day']) : '';
 $hideParam = isset($_GET['hide']) ? trim($_GET['hide']) : '';
 $isDownload = isset($_GET['download']) && $_GET['download'] === 'true';
@@ -175,11 +182,18 @@ foreach ($bookings as $idx => $b) {
     // Negative day filter
     if (!empty($hideDays) && in_array($day, $hideDays)) continue;
 
-    // Category filter
-    if ($categoryFilter !== '') {
+    // Category filter (supports comma-separated list)
+    if (!empty($categoryFilters)) {
         $catId = isset($b['categoryID']) ? $b['categoryID'] : 'default';
         $catName = isset($catIdToName[$catId]) ? strtolower($catIdToName[$catId]) : '';
-        if ($catName !== $categoryFilter && strtolower($catId) !== $categoryFilter) continue;
+        $catMatch = false;
+        foreach ($categoryFilters as $cf) {
+            if ($catName === $cf || strtolower($catId) === $cf) {
+                $catMatch = true;
+                break;
+            }
+        }
+        if (!$catMatch) continue;
     }
 
     $b['_idx'] = $idx;

@@ -130,7 +130,7 @@ global.Event = function () {};
 // ── Load app.js ────────────────────────────────────────
 
 const appSrc = fs.readFileSync(
-    path.join(__dirname, '..', '..', 'app.js'),
+    path.join(__dirname, '..', '..', 'app-legacy.js'),
     'utf-8'
 );
 
